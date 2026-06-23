@@ -8,8 +8,10 @@ import { fuzzystrmatch } from "@electric-sql/pglite/contrib/fuzzystrmatch";
 import { hstore } from "@electric-sql/pglite/contrib/hstore";
 import { ltree } from "@electric-sql/pglite/contrib/ltree";
 import { bloom } from "@electric-sql/pglite/contrib/bloom";
+import { find, aggregate } from "mingo";
 import { DATABASES, getDatabase } from "../src/data/databases.ts";
-import { LESSONS } from "../src/data/lessons.ts";
+import { getMongoDataset } from "../src/data/mongoData.ts";
+import { LESSONS, lessonTrack } from "../src/data/lessons.ts";
 
 let failures = 0;
 const fail = (msg: string) => {
@@ -37,8 +39,8 @@ for (const d of DATABASES) {
   }
 }
 
-// 2. Every lesson's solution (and checkSql) must run without error.
-for (const lesson of LESSONS) {
+// 2. Every SQL lesson's solution (and checkSql) must run without error.
+for (const lesson of LESSONS.filter((l) => lessonTrack(l) === "sql")) {
   await loadSeed(lesson.databaseId);
   try {
     if (lesson.checkSql) {
@@ -53,6 +55,32 @@ for (const lesson of LESSONS) {
     console.log(`✓ lesson runs: ${lesson.id}`);
   } catch (e) {
     fail(`${lesson.id}: ${(e as Error).message}`);
+  }
+}
+
+// 2b. Every Mongo lesson's solution must run via mingo and return docs.
+{
+  const ds = getMongoDataset("store");
+  const cloneC = (x) => JSON.parse(JSON.stringify(x));
+  const makeDb = (cols) => {
+    const dbm = {};
+    for (const [n, d] of Object.entries(cols)) {
+      dbm[n] = { find: (q = {}, p) => find(d, q, p), aggregate: (p) => aggregate(d, p) };
+    }
+    return dbm;
+  };
+  const normalize = (r) =>
+    Array.isArray(r) ? r : r && typeof r.all === "function" ? r.all() : r && typeof r === "object" ? [r] : [];
+  for (const lesson of LESSONS.filter((l) => lessonTrack(l) === "mongo")) {
+    try {
+      const rows = normalize(
+        new Function("db", `"use strict"; return ( ${lesson.solutionSql} );`)(makeDb(cloneC(ds.collections))),
+      );
+      if (rows.length === 0) fail(`${lesson.id}: returned 0 docs`);
+      else console.log(`✓ lesson runs: ${lesson.id}`);
+    } catch (e) {
+      fail(`${lesson.id}: ${(e as Error).message}`);
+    }
   }
 }
 

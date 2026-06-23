@@ -1,44 +1,56 @@
-import { forwardRef, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { sql, PostgreSQL } from "@codemirror/lang-sql";
+import { javascript } from "@codemirror/lang-javascript";
 import { snippet } from "@codemirror/autocomplete";
-import { Compartment } from "@codemirror/state";
+import { Compartment, type Extension } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 
 export interface SqlEditorHandle {
-  /**
-   * Replace the whole document with `template`. If the template contains
-   * `${...}` fields they become fill-in-the-blank slots: the first is selected
-   * so typing replaces it, and Tab jumps to the next.
-   */
+  /** Replace the whole document. `${n:label}` fields become fill-in slots. */
   load: (template: string) => void;
   /** Insert text at the cursor (used by the schema viewer). */
   insertAtCursor: (text: string) => void;
-  /** Feed the live DB schema so the editor can autocomplete table/column names. */
+  /** Feed the schema so the editor can autocomplete names (SQL mode only). */
   setSchema: (schema: Record<string, string[]>) => void;
   /** Current editor contents. */
   getValue: () => string;
 }
 
 interface Props {
+  /** Editor language: SQL for the Postgres track, JS for the Mongo track. */
+  language: "sql" | "javascript";
   onRun: () => void;
-  /** Fired on any user edit (so the host can clear stale pass/fail state). */
   onEdit: () => void;
 }
 
 export const SqlEditor = forwardRef<SqlEditorHandle, Props>(function SqlEditor(
-  { onRun, onEdit },
+  { language, onRun, onEdit },
   ref,
 ) {
   const cmRef = useRef<ReactCodeMirrorRef>(null);
-  // A template requested before the view existed; applied on create.
   const pending = useRef<string | null>(null);
-  // Lets us swap the SQL extension's schema for autocomplete without remounting.
-  const schemaComp = useRef(new Compartment());
+  const langComp = useRef(new Compartment());
+  const langRef = useRef(language);
+  const schemaRef = useRef<Record<string, string[]>>({});
+  langRef.current = language;
+
+  const buildLang = (): Extension =>
+    langRef.current === "javascript"
+      ? javascript()
+      : sql({ dialect: PostgreSQL, schema: schemaRef.current });
+
+  const reconfigure = (view: EditorView) =>
+    view.dispatch({ effects: langComp.current.reconfigure(buildLang()) });
+
+  // Swap the language extension when the track changes.
+  useEffect(() => {
+    const view = cmRef.current?.view;
+    if (view) reconfigure(view);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language]);
 
   const applyLoad = (view: EditorView, template: string) => {
-    // `snippet()` parses ${} fields and selects the first; plain text just
-    // gets inserted with the cursor at the end. Replacing [0, len] clears first.
     snippet(template)(view, null, 0, view.state.doc.length);
     view.focus();
   };
@@ -62,11 +74,9 @@ export const SqlEditor = forwardRef<SqlEditorHandle, Props>(function SqlEditor(
       view.focus();
     },
     setSchema(schema) {
+      schemaRef.current = schema;
       const view = cmRef.current?.view;
-      if (!view) return;
-      view.dispatch({
-        effects: schemaComp.current.reconfigure(sql({ dialect: PostgreSQL, schema })),
-      });
+      if (view) reconfigure(view);
     },
     getValue() {
       return cmRef.current?.view?.state.doc.toString() ?? "";
@@ -88,7 +98,7 @@ export const SqlEditor = forwardRef<SqlEditorHandle, Props>(function SqlEditor(
         value=""
         height="180px"
         theme="dark"
-        extensions={[schemaComp.current.of(sql({ dialect: PostgreSQL }))]}
+        extensions={[langComp.current.of(buildLang())]}
         onChange={() => onEdit()}
         onCreateEditor={(view) => {
           if (pending.current != null) {

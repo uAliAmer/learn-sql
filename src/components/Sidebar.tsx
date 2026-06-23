@@ -1,37 +1,44 @@
 import { Fragment } from "react";
-import { LESSONS } from "../data/lessons";
+import { LESSONS, lessonTrack, type Track } from "../data/lessons";
 import { DATABASES } from "../data/databases";
 
 interface Props {
   view: "lesson" | "playground" | "certificate";
+  track: Track;
   activeLessonId: string | null;
   playgroundDbId: string;
   done: Set<string>;
   streak: number;
   allComplete: boolean;
+  onSelectTrack: (t: Track) => void;
   onSelectLesson: (id: string) => void;
   onOpenPlayground: () => void;
+  onOpenCertificate: () => void;
   onSelectPlaygroundDb: (id: string) => void;
   onResetProgress: () => void;
-  onOpenCertificate: () => void;
 }
 
 export function Sidebar({
   view,
+  track,
   activeLessonId,
   playgroundDbId,
   done,
   streak,
   allComplete,
+  onSelectTrack,
   onSelectLesson,
   onOpenPlayground,
+  onOpenCertificate,
   onSelectPlaygroundDb,
   onResetProgress,
-  onOpenCertificate,
 }: Props) {
-  // Per-section completion counts.
+  const trackLessons = LESSONS.filter((l) => lessonTrack(l) === track);
+  const trackDone = trackLessons.filter((l) => done.has(l.id)).length;
+
+  // Per-section completion within this track.
   const stats = new Map<string, { total: number; done: number }>();
-  for (const l of LESSONS) {
+  for (const l of trackLessons) {
     const s = stats.get(l.section) ?? { total: 0, done: 0 };
     s.total++;
     if (done.has(l.id)) s.done++;
@@ -43,30 +50,45 @@ export function Sidebar({
       <div className="brand">
         <span className="brand__logo">🐘</span>
         <div>
-          <div className="brand__name">Learn SQL</div>
-          <div className="brand__sub">real Postgres, in your browser</div>
+          <div className="brand__name">Learn Databases</div>
+          <div className="brand__sub">real engines, in your browser</div>
         </div>
+      </div>
+
+      <div className="track-toggle">
+        <button
+          className={`track-btn${track === "sql" ? " is-active" : ""}`}
+          onClick={() => onSelectTrack("sql")}
+        >
+          SQL
+        </button>
+        <button
+          className={`track-btn${track === "mongo" ? " is-active" : ""}`}
+          onClick={() => onSelectTrack("mongo")}
+        >
+          MongoDB
+        </button>
       </div>
 
       <div className="sidebar__progress">
         <div className="sidebar__progress-row">
           <span>
-            {done.size} / {LESSONS.length} lessons
+            {trackDone} / {trackLessons.length} lessons
           </span>
           {streak > 0 && <span className="streak">🔥 {streak}-day streak</span>}
         </div>
         <div className="bar">
           <div
             className="bar__fill"
-            style={{ width: `${(done.size / LESSONS.length) * 100}%` }}
+            style={{ width: `${(trackDone / trackLessons.length) * 100}%` }}
           />
         </div>
       </div>
 
       <nav className="lessons-nav">
-        {LESSONS.map((l, i) => {
+        {trackLessons.map((l, i) => {
           const active = view === "lesson" && l.id === activeLessonId;
-          const showSection = i === 0 || LESSONS[i - 1].section !== l.section;
+          const showSection = i === 0 || trackLessons[i - 1].section !== l.section;
           const st = stats.get(l.section)!;
           const complete = st.done === st.total;
           return (
@@ -94,28 +116,32 @@ export function Sidebar({
       </nav>
 
       <div className="playground-nav">
-        <div className="nav-label">Free play</div>
-        <button
-          className={`lesson-link${view === "playground" ? " is-active" : ""}`}
-          onClick={onOpenPlayground}
-        >
-          <span className="tick">▶</span>
-          <span className="lesson-link__title">Playground</span>
-        </button>
-        {view === "playground" && (
-          <div className="db-picker">
-            {DATABASES.map((d) => (
-              <label key={d.id} className="db-option">
-                <input
-                  type="radio"
-                  name="pg-db"
-                  checked={playgroundDbId === d.id}
-                  onChange={() => onSelectPlaygroundDb(d.id)}
-                />
-                {d.name}
-              </label>
-            ))}
-          </div>
+        <div className="nav-label">More</div>
+        {track === "sql" && (
+          <>
+            <button
+              className={`lesson-link${view === "playground" ? " is-active" : ""}`}
+              onClick={onOpenPlayground}
+            >
+              <span className="tick">▶</span>
+              <span className="lesson-link__title">Playground</span>
+            </button>
+            {view === "playground" && (
+              <div className="db-picker">
+                {DATABASES.map((d) => (
+                  <label key={d.id} className="db-option">
+                    <input
+                      type="radio"
+                      name="pg-db"
+                      checked={playgroundDbId === d.id}
+                      onChange={() => onSelectPlaygroundDb(d.id)}
+                    />
+                    {d.name}
+                  </label>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         <button

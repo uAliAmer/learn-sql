@@ -1,3 +1,5 @@
+export type Track = "sql" | "mongo";
+
 export type SyntaxRole = "keyword" | "slot" | "literal";
 
 export interface SyntaxPart {
@@ -10,6 +12,8 @@ export interface SyntaxPart {
 export interface Lesson {
   id: string;
   title: string;
+  /** Which database track this lesson belongs to. Defaults to "sql". */
+  track?: Track;
   /** Sidebar grouping header. */
   section: string;
   /** Short concept tag shown as a chip (must match a key in CONCEPTS). */
@@ -51,6 +55,7 @@ const JSON_S = "JSON";
 const WRITES = "Changing data";
 const INDEXES = "Indexes";
 const EXT = "Extensions";
+const MONGO = "MongoDB";
 
 export const LESSONS: Lesson[] = [
   // ----------------------------------------------------------------- Basics
@@ -747,7 +752,109 @@ export const LESSONS: Lesson[] = [
     starterTemplate: "SELECT name FROM categories WHERE ${1:___};",
     solutionSql: "SELECT name FROM categories WHERE path <@ 'all.electronics';",
   },
+
+  // ----------------------------------------------------------------- MongoDB
+  {
+    id: "m-find-all",
+    track: "mongo",
+    title: "Find all documents",
+    section: MONGO,
+    concept: "MongoDB",
+    databaseId: "store",
+    keyIdea: "`find({})` with an empty filter returns **every document** in a collection.",
+    task: "Return **all documents** in the `users` collection.",
+    syntax: [kw("db.users.find("), slot("{}", "empty filter = all"), kw(")")],
+    hint: "db.users.find({})",
+    starterTemplate: "db.users.find(${1:___})",
+    solutionSql: "db.users.find({})",
+  },
+  {
+    id: "m-filter",
+    track: "mongo",
+    title: "Filter documents",
+    section: MONGO,
+    concept: "MongoDB",
+    databaseId: "store",
+    keyIdea: "Pass a filter document — `{ field: value }` keeps only matching docs.",
+    task: "Find users whose `plan` is **pro**.",
+    syntax: [kw("db.users.find("), slot("{ field: value }", "the filter document"), kw(")")],
+    hint: 'db.users.find({ plan: "pro" })',
+    starterTemplate: "db.users.find({ ${1:___} })",
+    solutionSql: 'db.users.find({ plan: "pro" })',
+  },
+  {
+    id: "m-projection",
+    track: "mongo",
+    title: "Pick fields (projection)",
+    section: MONGO,
+    concept: "MongoDB",
+    databaseId: "store",
+    keyIdea: "A second argument picks fields: `1` to include, `0` to exclude (`_id` is on by default).",
+    task: "Return only the `name` of each user — exclude `_id`.",
+    syntax: [kw("db.users.find({},"), slot("{ name: 1, _id: 0 }", "1 = keep, 0 = drop"), kw(")")],
+    hint: "db.users.find({}, { name: 1, _id: 0 })",
+    starterTemplate: "db.users.find({}, ${1:___})",
+    solutionSql: "db.users.find({}, { name: 1, _id: 0 })",
+  },
+  {
+    id: "m-operators",
+    track: "mongo",
+    title: "Query operators",
+    section: MONGO,
+    concept: "MongoDB",
+    databaseId: "store",
+    keyIdea: "Operators like `$gt`, `$lt`, `$in` go inside the field: `{ price: { $gt: 50 } }`.",
+    task: "Find products with `price` greater than **50**.",
+    syntax: [kw("db.products.find({ price:"), slot("{ $gt: 50 }", "$gt, $lt, $in, ..."), kw("})")],
+    hint: "db.products.find({ price: { $gt: 50 } })",
+    starterTemplate: "db.products.find({ price: ${1:___} })",
+    solutionSql: "db.products.find({ price: { $gt: 50 } })",
+  },
+  {
+    id: "m-sort-limit",
+    track: "mongo",
+    title: "Sort and limit",
+    section: MONGO,
+    concept: "MongoDB",
+    databaseId: "store",
+    keyIdea: "Chain `.sort({ field: -1 })` (−1 = descending) and `.limit(n)` onto the cursor.",
+    task: "Show the **3 most expensive** products, priciest first (full documents).",
+    syntax: [
+      kw("db.products.find({})"),
+      kw(".sort("),
+      slot("{ price: -1 }", "-1 = descending"),
+      kw(").limit("),
+      slot("3"),
+      kw(")"),
+    ],
+    hint: "db.products.find({}).sort({ price: -1 }).limit(3)",
+    starterTemplate: "db.products.find({}).sort(${1:___}).limit(${2:___})",
+    solutionSql: "db.products.find({}).sort({ price: -1 }).limit(3)",
+    orderMatters: true,
+  },
+  {
+    id: "m-aggregate",
+    track: "mongo",
+    title: "Aggregation pipeline",
+    section: MONGO,
+    concept: "MongoDB",
+    databaseId: "store",
+    keyIdea: "`aggregate([...])` runs a pipeline; `$group` buckets by `_id` and computes per-group values.",
+    task: "Count orders per `status`: output `_id` (the status) and a `count`.",
+    syntax: [
+      kw("db.orders.aggregate(["),
+      slot("{ $group: { _id, ... } }", "a pipeline stage"),
+      kw("])"),
+    ],
+    hint: 'db.orders.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }])',
+    starterTemplate: 'db.orders.aggregate([{ $group: { _id: "$status", count: ${1:___} } }])',
+    solutionSql: 'db.orders.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }])',
+  },
 ];
+
+export function lessonTrack(l: Lesson): Track {
+  return l.track ?? "sql";
+}
 
 export function getLesson(id: string): Lesson | undefined {
   return LESSONS.find((l) => l.id === id);

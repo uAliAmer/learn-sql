@@ -34,6 +34,9 @@ export const CONCEPTS: Record<string, ConceptMeta> = {
   pg_trgm: { color: "#fbbf24", tagline: "Fuzzy text matching with trigrams." },
   hstore: { color: "#a78bfa", tagline: "Key/value pairs inside a column." },
   ltree: { color: "#4ade80", tagline: "Hierarchical tree paths as a data type." },
+
+  // MongoDB track
+  MongoDB: { color: "#13aa52", tagline: "Query documents the MongoDB way." },
 };
 
 export function conceptColor(concept: string): string {

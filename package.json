@@ -11,12 +11,14 @@
     "deploy": "npm run build && wrangler pages deploy ./dist --project-name learn-sql"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.2.17",
-    "@uiw/react-codemirror": "^4.23.6",
-    "@codemirror/lang-sql": "^6.8.0",
     "@codemirror/autocomplete": "^6.18.0",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-sql": "^6.8.0",
     "@codemirror/state": "^6.4.0",
     "@codemirror/view": "^6.34.0",
+    "@electric-sql/pglite": "^0.2.17",
+    "@uiw/react-codemirror": "^4.23.6",
+    "mingo": "^7.2.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

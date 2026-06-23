@@ -2,14 +2,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { SqlEditor, type SqlEditorHandle } from "./components/SqlEditor";
 import { ResultTable } from "./components/ResultTable";
+import { DocumentView } from "./components/DocumentView";
 import { DiffView } from "./components/DiffView";
 import { CertificateView } from "./components/CertificateView";
 import { NameModal } from "./components/NameModal";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { SchemaViewer } from "./components/SchemaViewer";
 import { LessonPanel, type CheckState } from "./components/LessonPanel";
-import { LESSONS, getLesson } from "./data/lessons";
+import { LESSONS, getLesson, lessonTrack, type Track } from "./data/lessons";
 import { getDatabase } from "./data/databases";
+import { getMongoDataset } from "./data/mongoData";
 import { currentStreak, bumpStreak } from "./lib/streak";
 import {
   loadDatabase,
@@ -19,6 +21,7 @@ import {
   type QueryResult,
   type TableInfo,
 } from "./db/pglite";
+import { loadMongo, runMongo, checkMongo, mongoSchema } from "./db/mongo";
 
 type View = "lesson" | "playground" | "certificate";
 
@@ -36,6 +39,7 @@ const SECTION_COUNT = new Set(LESSONS.map((l) => l.section)).size;
 
 export default function App() {
   const [view, setView] = useState<View>("lesson");
+  const [track, setTrack] = useState<Track>("sql");
   const [activeLessonId, setActiveLessonId] = useState<string>(LESSONS[0].id);
   const [playgroundDbId, setPlaygroundDbId] = useState<string>("shop");
   const [done, setDone] = useState<Set<string>>(loadProgress);
@@ -55,6 +59,7 @@ export default function App() {
   const editorRef = useRef<SqlEditorHandle>(null);
 
   const lesson = view === "lesson" ? getLesson(activeLessonId) : undefined;
+  const activeTrack: Track = lesson ? lessonTrack(lesson) : "sql"; // playground is SQL
   const seedId = view === "lesson" ? lesson!.databaseId : playgroundDbId;
   const contextKey =
     view === "certificate"
@@ -63,7 +68,6 @@ export default function App() {
         ? `lesson:${activeLessonId}`
         : `pg:${playgroundDbId}`;
 
-  // Confirm + lock the name in one step, so it can't be re-issued to someone else.
   const confirmName = useCallback((n: string) => {
     setUserName(n);
     setNameLocked(true);
@@ -75,7 +79,6 @@ export default function App() {
     }
   }, []);
 
-  // Persist progress.
   useEffect(() => {
     try {
       localStorage.setItem("learn-sql:progress:v1", JSON.stringify([...done]));
@@ -95,7 +98,7 @@ export default function App() {
     applySchema(await getSchema());
   }, [applySchema]);
 
-  // Load / reset the database + editor whenever the active context changes.
+  // Load / reset the active database + editor whenever the context changes.
   useEffect(() => {
     if (view === "certificate") {
       setReady(true);
@@ -108,11 +111,17 @@ export default function App() {
     setError(null);
     setCheck({ status: "idle" });
     (async () => {
-      const db = getDatabase(seedId);
-      await loadDatabase(db.id, db.seedSql);
-      const tables = await getSchema();
-      if (cancelled) return;
-      applySchema(tables);
+      if (activeTrack === "mongo") {
+        loadMongo(seedId);
+        if (cancelled) return;
+        applySchema(mongoSchema());
+      } else {
+        const db = getDatabase(seedId);
+        await loadDatabase(db.id, db.seedSql);
+        const tables = await getSchema();
+        if (cancelled) return;
+        applySchema(tables);
+      }
       editorRef.current?.load(templateFor(view, activeLessonId, playgroundDbId));
       setReady(true);
     })();
@@ -126,35 +135,51 @@ export default function App() {
     setCheck({ status: "idle" });
     setComparison(null);
     try {
-      const res = await runQuery(editorRef.current?.getValue() ?? "");
-      setResults(res);
-      setError(null);
-      await refreshSchema();
+      if (activeTrack === "mongo") {
+        setResults(runMongo(editorRef.current?.getValue() ?? ""));
+        setError(null);
+      } else {
+        setResults(await runQuery(editorRef.current?.getValue() ?? ""));
+        setError(null);
+        await refreshSchema();
+      }
     } catch (err) {
       setError((err as Error).message);
       setResults([]);
     }
-  }, [refreshSchema]);
+  }, [activeTrack, refreshSchema]);
 
   const grade = useCallback(async () => {
     if (!lesson) return;
     setCheck({ status: "checking" });
-    if (lesson.checkSql) {
-      const db = getDatabase(lesson.databaseId);
-      await loadDatabase(db.id, db.seedSql);
-      await refreshSchema();
+    const userQuery = editorRef.current?.getValue() ?? "";
+    let r: { pass: boolean; actual: QueryResult | null; expected: QueryResult | null; error?: string };
+    if (activeTrack === "mongo") {
+      r = checkMongo({
+        userCode: userQuery,
+        solutionCode: lesson.solutionSql,
+        checkCode: lesson.checkSql,
+        orderMatters: lesson.orderMatters,
+      });
+    } else {
+      if (lesson.checkSql) {
+        const db = getDatabase(lesson.databaseId);
+        await loadDatabase(db.id, db.seedSql);
+        await refreshSchema();
+      }
+      r = await checkAnswer({
+        userSql: userQuery,
+        solutionSql: lesson.solutionSql,
+        checkSql: lesson.checkSql,
+        orderMatters: lesson.orderMatters,
+      });
     }
-    const r = await checkAnswer({
-      userSql: editorRef.current?.getValue() ?? "",
-      solutionSql: lesson.solutionSql,
-      checkSql: lesson.checkSql,
-      orderMatters: lesson.orderMatters,
-    });
+
     if (r.error) {
       setError(r.error);
       setResults([]);
       setComparison(null);
-      setCheck({ status: "fail", message: "Your SQL raised an error — see below." });
+      setCheck({ status: "fail", message: "Your query raised an error — see below." });
       return;
     }
     setError(null);
@@ -165,7 +190,7 @@ export default function App() {
       const finishedAll = !done.has(lesson.id) && done.size + 1 >= LESSONS.length;
       setDone((prev) => new Set(prev).add(lesson.id));
       setStreak(bumpStreak());
-      if (finishedAll) setView("certificate"); // celebrate: jump to the certificate
+      if (finishedAll) setView("certificate");
     } else {
       setResults([]);
       setComparison(r.expected && r.actual ? { expected: r.expected, actual: r.actual } : null);
@@ -177,28 +202,34 @@ export default function App() {
             : "The result doesn't match what's expected. Try again.",
       });
     }
-  }, [lesson, refreshSchema, done]);
+  }, [lesson, activeTrack, refreshSchema, done]);
 
   const goNext = useCallback(() => {
     const idx = LESSONS.findIndex((l) => l.id === activeLessonId);
     if (idx >= 0 && idx < LESSONS.length - 1) {
+      const next = LESSONS[idx + 1];
       setView("lesson");
-      setActiveLessonId(LESSONS[idx + 1].id);
+      setTrack(lessonTrack(next));
+      setActiveLessonId(next.id);
     }
   }, [activeLessonId]);
 
   const resetDb = useCallback(async () => {
-    const db = getDatabase(seedId);
-    await loadDatabase(db.id, db.seedSql);
-    await refreshSchema();
+    if (activeTrack === "mongo") {
+      loadMongo(seedId);
+      applySchema(mongoSchema());
+    } else {
+      const db = getDatabase(seedId);
+      await loadDatabase(db.id, db.seedSql);
+      await refreshSchema();
+    }
     editorRef.current?.load(templateFor(view, activeLessonId, playgroundDbId));
     setResults([]);
     setComparison(null);
     setError(null);
     setCheck({ status: "idle" });
-  }, [seedId, view, activeLessonId, playgroundDbId, refreshSchema]);
+  }, [seedId, view, activeTrack, activeLessonId, playgroundDbId, applySchema, refreshSchema]);
 
-  // Wipe progress AND the certificate name/lock.
   const resetAll = useCallback(() => {
     setDone(new Set());
     setUserName("");
@@ -213,23 +244,42 @@ export default function App() {
     setShowResetConfirm(false);
   }, []);
 
+  const selectTrack = useCallback((t: Track) => {
+    setTrack(t);
+    const first = LESSONS.find((l) => lessonTrack(l) === t);
+    if (first) {
+      setView("lesson");
+      setActiveLessonId(first.id);
+    }
+  }, []);
+
   const lessonIndex = LESSONS.findIndex((l) => l.id === activeLessonId);
-  const activeDb = view === "certificate" ? null : getDatabase(seedId);
+  const dbName =
+    view === "certificate"
+      ? ""
+      : activeTrack === "mongo"
+        ? getMongoDataset(seedId).name
+        : getDatabase(seedId).name;
 
   return (
     <div className="app">
       <Sidebar
         view={view}
+        track={track}
         activeLessonId={activeLessonId}
         playgroundDbId={playgroundDbId}
         done={done}
         streak={streak}
         allComplete={done.size === LESSONS.length}
+        onSelectTrack={selectTrack}
         onSelectLesson={(id) => {
           setView("lesson");
           setActiveLessonId(id);
         }}
-        onOpenPlayground={() => setView("playground")}
+        onOpenPlayground={() => {
+          setTrack("sql");
+          setView("playground");
+        }}
         onOpenCertificate={() => setView("certificate")}
         onSelectPlaygroundDb={setPlaygroundDbId}
         onResetProgress={() => setShowResetConfirm(true)}
@@ -262,8 +312,7 @@ export default function App() {
             ) : (
               <div className="lesson">
                 <span className="chip">Playground</span>
-                <h2>{activeDb!.name}</h2>
-                <p className="lesson__prompt">{activeDb!.description}</p>
+                <h2>{dbName}</h2>
                 <p className="muted">
                   No grading here — run anything you like. Use the schema on the right, and
                   hit <strong>Reset data</strong> to restore the sample rows.
@@ -272,7 +321,9 @@ export default function App() {
             )}
 
             <div className="schema-wrap">
-              <div className="nav-label">Schema · {activeDb!.name}</div>
+              <div className="nav-label">
+                {activeTrack === "mongo" ? "Collections" : "Schema"} · {dbName}
+              </div>
               <SchemaViewer tables={schema} onPick={(s) => editorRef.current?.insertAtCursor(s)} />
             </div>
           </section>
@@ -280,6 +331,7 @@ export default function App() {
           <section className="panel panel--right">
             <SqlEditor
               ref={editorRef}
+              language={activeTrack === "mongo" ? "javascript" : "sql"}
               onRun={run}
               onEdit={() => setCheck((c) => (c.status === "idle" ? c : { status: "idle" }))}
             />
@@ -300,6 +352,8 @@ export default function App() {
             <div className="results">
               {comparison ? (
                 <DiffView expected={comparison.expected} actual={comparison.actual} />
+              ) : activeTrack === "mongo" ? (
+                <DocumentView result={results[0] ?? null} error={error} />
               ) : results.length === 0 ? (
                 <ResultTable result={null} error={error} />
               ) : (
