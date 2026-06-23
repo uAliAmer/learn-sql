@@ -8,10 +8,12 @@ interface Props {
   playgroundDbId: string;
   done: Set<string>;
   streak: number;
+  allComplete: boolean;
   onSelectLesson: (id: string) => void;
   onOpenPlayground: () => void;
   onSelectPlaygroundDb: (id: string) => void;
   onResetProgress: () => void;
+  onShowCertificate: () => void;
 }
 
 export function Sidebar({
@@ -20,10 +22,12 @@ export function Sidebar({
   playgroundDbId,
   done,
   streak,
+  allComplete,
   onSelectLesson,
   onOpenPlayground,
   onSelectPlaygroundDb,
   onResetProgress,
+  onShowCertificate,
 }: Props) {
   // Per-section completion counts.
   const stats = new Map<string, { total: number; done: number }>();
@@ -57,6 +61,11 @@ export function Sidebar({
             style={{ width: `${(done.size / LESSONS.length) * 100}%` }}
           />
         </div>
+        {allComplete && (
+          <button className="cert-btn" onClick={onShowCertificate}>
+            🎓 View certificate
+          </button>
+        )}
       </div>
 
       <nav className="lessons-nav">

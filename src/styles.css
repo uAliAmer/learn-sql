@@ -794,3 +794,108 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------------- Certificate ---------------- */
+.cert-btn {
+  margin-top: 10px;
+  width: 100%;
+  background: linear-gradient(90deg, #e3b341, #f0883e);
+  color: #0d1117;
+  border: none;
+  border-radius: 8px;
+  padding: 9px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.cert-btn:hover {
+  filter: brightness(1.06);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+.modal__card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  width: min(960px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+}
+.modal__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal__head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.modal__close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+}
+.modal__close:hover {
+  color: var(--text);
+}
+.modal__name {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 12px 0;
+}
+.modal__name input {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 15px;
+}
+.cert-wrap {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.cert-wrap svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.modal__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .cert-wrap,
+  .cert-wrap * {
+    visibility: visible;
+  }
+  .cert-wrap {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none;
+  }
+}

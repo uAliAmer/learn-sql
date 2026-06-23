@@ -22,6 +22,8 @@ change the data.
   shop, a city library, JSON profiles, a 5k-row events table, and four extension demos).
 - **Live schema viewer** — click a table or column to drop it into the editor.
 - **Progress saved** locally (localStorage), so your checkmarks persist.
+- **Certificate of completion** — finish every lesson to unlock a personalized
+  certificate you can download as a PNG.
 - **Real Postgres dialect** — `serial`, `numeric`, `JOIN`, `HAVING`, etc.
 
 ## Tech

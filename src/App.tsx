@@ -3,6 +3,7 @@ import { Sidebar } from "./components/Sidebar";
 import { SqlEditor, type SqlEditorHandle } from "./components/SqlEditor";
 import { ResultTable } from "./components/ResultTable";
 import { DiffView } from "./components/DiffView";
+import { CertificateModal } from "./components/CertificateModal";
 import { SchemaViewer } from "./components/SchemaViewer";
 import { LessonPanel, type CheckState } from "./components/LessonPanel";
 import { LESSONS, getLesson } from "./data/lessons";
@@ -29,12 +30,25 @@ function templateFor(view: View, lessonId: string, playgroundDbId: string): stri
   return PLAYGROUND_STARTER[playgroundDbId] ?? "SELECT * FROM information_schema.tables;";
 }
 
+const SECTION_COUNT = new Set(LESSONS.map((l) => l.section)).size;
+
 export default function App() {
   const [view, setView] = useState<View>("lesson");
   const [activeLessonId, setActiveLessonId] = useState<string>(LESSONS[0].id);
   const [playgroundDbId, setPlaygroundDbId] = useState<string>("shop");
   const [done, setDone] = useState<Set<string>>(loadProgress);
   const [streak, setStreak] = useState<number>(currentStreak);
+  const [showCert, setShowCert] = useState(false);
+  const [userName, setUserName] = useState<string>(loadName);
+
+  const saveName = useCallback((n: string) => {
+    setUserName(n);
+    try {
+      localStorage.setItem("learn-sql:name:v1", n);
+    } catch {
+      /* best-effort */
+    }
+  }, []);
 
   const [results, setResults] = useState<QueryResult[]>([]);
   const [comparison, setComparison] = useState<{ expected: QueryResult; actual: QueryResult } | null>(null);
@@ -135,6 +149,10 @@ export default function App() {
       setComparison(null);
       setResults(r.actual ? [r.actual] : []);
       setCheck({ status: "pass" });
+      // If this completes the final lesson, celebrate with the certificate.
+      if (!done.has(lesson.id) && done.size + 1 >= LESSONS.length) {
+        setShowCert(true);
+      }
       setDone((prev) => new Set(prev).add(lesson.id));
       setStreak(bumpStreak());
     } else {
@@ -148,7 +166,7 @@ export default function App() {
             : "The result doesn't match what's expected. Try again.",
       });
     }
-  }, [lesson, refreshSchema]);
+  }, [lesson, refreshSchema, done]);
 
   const goNext = useCallback(() => {
     const idx = LESSONS.findIndex((l) => l.id === activeLessonId);
@@ -189,6 +207,7 @@ export default function App() {
         playgroundDbId={playgroundDbId}
         done={done}
         streak={streak}
+        allComplete={done.size === LESSONS.length}
         onSelectLesson={(id) => {
           setView("lesson");
           setActiveLessonId(id);
@@ -196,6 +215,7 @@ export default function App() {
         onOpenPlayground={() => setView("playground")}
         onSelectPlaygroundDb={setPlaygroundDbId}
         onResetProgress={resetProgress}
+        onShowCertificate={() => setShowCert(true)}
       />
 
       <main className="main">
@@ -259,6 +279,16 @@ export default function App() {
           </div>
         </section>
       </main>
+
+      {showCert && (
+        <CertificateModal
+          name={userName}
+          onName={saveName}
+          lessonCount={LESSONS.length}
+          sectionCount={SECTION_COUNT}
+          onClose={() => setShowCert(false)}
+        />
+      )}
     </div>
   );
 }
@@ -269,5 +299,13 @@ function loadProgress(): Set<string> {
     return raw ? new Set(JSON.parse(raw)) : new Set();
   } catch {
     return new Set();
+  }
+}
+
+function loadName(): string {
+  try {
+    return localStorage.getItem("learn-sql:name:v1") ?? "";
+  } catch {
+    return "";
   }
 }
