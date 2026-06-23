@@ -23,6 +23,7 @@ export const CONCEPTS: Record<string, ConceptMeta> = {
   Subquery: { color: "#c084fc", tagline: "A query inside another query." },
   CTE: { color: "#34d399", tagline: "Name a result with WITH, then use it." },
   CASE: { color: "#fb923c", tagline: "If/then logic inside a query." },
+  JSON: { color: "#14b8a6", tagline: "Query and update JSON stored in a column." },
 
   // Indexes
   Index: { color: "#60a5fa", tagline: "Jump straight to rows instead of scanning all." },

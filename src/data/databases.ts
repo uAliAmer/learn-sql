@@ -253,6 +253,22 @@ SELECT
 FROM generate_series(1, 5000) AS g;
 `;
 
+// Users with a JSONB `profile` column — for the JSON section.
+const JSON_SEED = `
+CREATE TABLE users (
+  id       serial PRIMARY KEY,
+  name     text NOT NULL,
+  profile  jsonb NOT NULL
+);
+
+INSERT INTO users (name, profile) VALUES
+  ('Amara Okafor',  '{"age":31,"city":"Lagos","plan":"pro","tags":["mobile","beta"],"address":{"country":"NG","zip":"100001"}}'),
+  ('Liam Murphy',   '{"age":27,"city":"Dublin","plan":"free","tags":["web"],"address":{"country":"IE","zip":"D02"}}'),
+  ('Sofia Rossi',   '{"age":35,"city":"Milan","plan":"pro","tags":["web","beta"],"address":{"country":"IT","zip":"20121"}}'),
+  ('Kenji Tanaka',  '{"age":42,"city":"Tokyo","plan":"enterprise","tags":["mobile"],"address":{"country":"JP","zip":"100-0001"}}'),
+  ('Noor Al-Sayed', '{"age":29,"city":"Cairo","plan":"free","tags":[],"address":{"country":"EG","zip":"11511"}}');
+`;
+
 export const DATABASES: SampleDatabase[] = [
   {
     id: "shop",
@@ -296,6 +312,12 @@ export const DATABASES: SampleDatabase[] = [
     name: "Events (5k rows)",
     description: "A large events table — for seeing how indexes avoid scanning everything.",
     seedSql: BIG_SEED,
+  },
+  {
+    id: "json",
+    name: "JSON Profiles",
+    description: "Users with a JSONB profile column (city, plan, tags, nested address).",
+    seedSql: JSON_SEED,
   },
 ];
 

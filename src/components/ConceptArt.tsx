@@ -32,6 +32,7 @@ const CAPTIONS: Record<string, string> = {
   JOIN: "Matching keys link rows across two tables.",
   Write: "Insert, update, or delete actual rows.",
   Index: "An index skips the full scan, straight to the rows.",
+  JSON: "-> reads a field; ->> returns it as text.",
   pgvector: "Nearest vectors to the query point.",
 };
 
@@ -185,6 +186,29 @@ function render(concept: string, c: string) {
               </text>
             </g>
           ))}
+        </>
+      );
+
+    case "JSON":
+      return (
+        <>
+          <rect x={20} y={22} width={150} height={96} rx={8} fill={ROW} stroke={NEUTRAL} />
+          <text x={32} y={48} fill={MUTED} fontSize="12" fontFamily="ui-monospace, monospace">
+            "name": …
+          </text>
+          <rect x={26} y={58} width={138} height={20} rx={4} fill={c} opacity={0.18} />
+          <text x={32} y={72} fill={c} fontSize="12" fontFamily="ui-monospace, monospace" fontWeight="700">
+            "city": "Cairo"
+          </text>
+          <text x={32} y={98} fill={MUTED} fontSize="12" fontFamily="ui-monospace, monospace">
+            "plan": "pro"
+          </text>
+          <line x1={170} y1={68} x2={206} y2={68} stroke={c} strokeWidth={2.5} />
+          <polygon points="206,64 206,72 213,68" fill={c} />
+          <rect x={218} y={56} width={64} height={24} rx={6} fill={c} />
+          <text x={250} y={72} fill="#0d1117" fontSize="12" fontWeight="800" textAnchor="middle">
+            Cairo
+          </text>
         </>
       );
 

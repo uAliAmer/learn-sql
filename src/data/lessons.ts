@@ -47,6 +47,7 @@ const BASICS = "Querying basics";
 const AGG = "Aggregating";
 const JOINS = "Joining tables";
 const FURTHER = "Going further";
+const JSON_S = "JSON";
 const WRITES = "Changing data";
 const INDEXES = "Indexes";
 const EXT = "Extensions";
@@ -423,6 +424,131 @@ export const LESSONS: Lesson[] = [
       "SELECT name,\n  CASE WHEN ${1:___} THEN 'cheap'\n       WHEN ${2:___} THEN 'mid'\n       ELSE ${3:___} END AS tier\nFROM products;",
     solutionSql:
       "SELECT name, CASE WHEN price < 20 THEN 'cheap' WHEN price < 100 THEN 'mid' ELSE 'pricey' END AS tier FROM products;",
+  },
+
+  // ----------------------------------------------------------------------- JSON
+  {
+    id: "json-get",
+    title: "Read a JSON field",
+    section: JSON_S,
+    concept: "JSON",
+    databaseId: "json",
+    keyIdea: "`->` gets a JSON field (still JSON); `->>` gets it **as text**.",
+    task: "Show each user's `name` and their **city** — the `city` field from the `profile` JSON, as text. Alias it `city`.",
+    syntax: [
+      kw("SELECT"),
+      slot("<column>,"),
+      slot("profile ->> '<key>'", "->> returns the value as text"),
+      kw("FROM"),
+      slot("<table>"),
+    ],
+    hint: "SELECT name, profile ->> 'city' AS city FROM users;",
+    starterTemplate: "SELECT name, ${1:___} AS city FROM users;",
+    solutionSql: "SELECT name, profile ->> 'city' AS city FROM users;",
+  },
+  {
+    id: "json-filter",
+    title: "Filter on a JSON field",
+    section: JSON_S,
+    concept: "JSON",
+    databaseId: "json",
+    keyIdea: "Extract the field first, then compare: `profile ->> 'plan' = 'pro'`.",
+    task: "List the `name` of users on the **pro** plan — where `profile`'s `plan` field equals `pro`.",
+    syntax: [
+      kw("SELECT"),
+      slot("<column>"),
+      kw("FROM"),
+      slot("<table>"),
+      kw("WHERE"),
+      slot("profile ->> '<key>' = '<value>'", "compare the extracted text"),
+    ],
+    hint: "WHERE profile ->> 'plan' = 'pro'",
+    starterTemplate: "SELECT name FROM users WHERE ${1:___} = 'pro';",
+    solutionSql: "SELECT name FROM users WHERE profile ->> 'plan' = 'pro';",
+  },
+  {
+    id: "json-nested",
+    title: "Reach into nested JSON",
+    section: JSON_S,
+    concept: "JSON",
+    databaseId: "json",
+    keyIdea: "Chain `->` to dig through nested objects, then `->>` for the final text.",
+    task: "Show each user's `name` and their **country**, nested at `profile.address.country`. Alias it `country`.",
+    syntax: [
+      kw("SELECT"),
+      slot("<column>,"),
+      slot("profile -> '<key>' ->> '<key>'", "dig in with ->, finish with ->>"),
+      kw("FROM"),
+      slot("<table>"),
+    ],
+    hint: "profile -> 'address' ->> 'country'   (or  profile #>> '{address,country}')",
+    starterTemplate: "SELECT name, ${1:___} AS country FROM users;",
+    solutionSql: "SELECT name, profile -> 'address' ->> 'country' AS country FROM users;",
+  },
+  {
+    id: "json-contains",
+    title: "Containment with @>",
+    section: JSON_S,
+    concept: "JSON",
+    databaseId: "json",
+    keyIdea: "`@>` tests whether a JSON value **contains** a sub-object — and a GIN index can speed it up.",
+    task: 'List the `name` of users whose `profile` **contains** `{"plan": "pro"}`, using the `@>` operator.',
+    syntax: [
+      kw("SELECT"),
+      slot("<column>"),
+      kw("FROM"),
+      slot("<table>"),
+      kw("WHERE"),
+      slot("profile @> '<json>'", "right side must be contained"),
+    ],
+    hint: 'WHERE profile @> \'{"plan": "pro"}\'',
+    starterTemplate: "SELECT name FROM users WHERE profile @> '${1:___}';",
+    solutionSql: 'SELECT name FROM users WHERE profile @> \'{"plan": "pro"}\';',
+  },
+  {
+    id: "json-array",
+    title: "Expand a JSON array",
+    section: JSON_S,
+    concept: "JSON",
+    databaseId: "json",
+    keyIdea: "`jsonb_array_elements_text(arr)` turns a JSON array into **one row per element**.",
+    task: "Each user has a `tags` array in `profile`. List each user's `name` next to **each of their tags** (one row per tag), aliasing the tag `tag`.",
+    syntax: [
+      kw("SELECT"),
+      slot("u.name, t AS tag"),
+      kw("FROM"),
+      slot("<table> u,"),
+      slot("jsonb_array_elements_text(u.profile -> 'tags')", "array → one row each"),
+      kw("AS"),
+      slot("t"),
+    ],
+    hint: "SELECT u.name, t AS tag FROM users u, jsonb_array_elements_text(u.profile -> 'tags') AS t;",
+    starterTemplate: "SELECT u.name, t AS tag\nFROM users u, ${1:___} AS t;",
+    solutionSql:
+      "SELECT u.name, t AS tag FROM users u, jsonb_array_elements_text(u.profile -> 'tags') AS t;",
+  },
+  {
+    id: "json-set",
+    title: "Update a JSON field",
+    section: JSON_S,
+    concept: "JSON",
+    databaseId: "json",
+    keyIdea: "`jsonb_set(doc, path, value)` updates a field; the new value must be valid JSON.",
+    task: "Upgrade **Amara Okafor** to the `enterprise` plan: use `jsonb_set` to set `profile`'s `plan` field.",
+    syntax: [
+      kw("UPDATE"),
+      slot("<table>"),
+      kw("SET"),
+      slot("profile = jsonb_set(profile, '{<key>}', '<json>')", "path in {braces}, value as JSON"),
+      kw("WHERE"),
+      slot("<condition>"),
+    ],
+    hint: "UPDATE users SET profile = jsonb_set(profile, '{plan}', '\"enterprise\"') WHERE name = 'Amara Okafor';",
+    starterTemplate:
+      "UPDATE users SET profile = jsonb_set(profile, '{plan}', ${1:___}) WHERE ${2:___};",
+    solutionSql:
+      "UPDATE users SET profile = jsonb_set(profile, '{plan}', '\"enterprise\"') WHERE name = 'Amara Okafor';",
+    checkSql: "SELECT name, profile ->> 'plan' AS plan FROM users ORDER BY name;",
   },
 
   // ------------------------------------------------------------- Changing data
