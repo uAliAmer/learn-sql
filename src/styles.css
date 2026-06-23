@@ -28,6 +28,33 @@ body {
   color: var(--text);
 }
 
+/* Scrollbars themed to match the dark UI */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--chip) transparent;
+}
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--chip);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475061;
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .app {
   display: grid;
   grid-template-columns: 280px 1fr;
