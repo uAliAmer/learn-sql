@@ -1,13 +1,23 @@
 import { PGlite } from "@electric-sql/pglite";
 import type { Transaction } from "@electric-sql/pglite";
+import { vector } from "@electric-sql/pglite/vector";
+import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
+import { fuzzystrmatch } from "@electric-sql/pglite/contrib/fuzzystrmatch";
+import { hstore } from "@electric-sql/pglite/contrib/hstore";
+import { ltree } from "@electric-sql/pglite/contrib/ltree";
 
 // A single in-browser Postgres instance, shared across the app.
 // Each visitor gets their own isolated database — nothing leaves the tab.
+// Extensions are registered here; seeds opt in with `CREATE EXTENSION`.
 let dbPromise: Promise<PGlite> | null = null;
 let loadedSeedId: string | null = null;
 
 export function getDb(): Promise<PGlite> {
-  if (!dbPromise) dbPromise = PGlite.create();
+  if (!dbPromise) {
+    dbPromise = PGlite.create({
+      extensions: { vector, pg_trgm, fuzzystrmatch, hstore, ltree },
+    });
+  }
   return dbPromise;
 }
 

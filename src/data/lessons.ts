@@ -10,6 +10,8 @@ export interface SyntaxPart {
 export interface Lesson {
   id: string;
   title: string;
+  /** Sidebar grouping header. */
+  section: string;
   /** Short concept tag shown as a chip (must match a key in CONCEPTS). */
   concept: string;
   databaseId: string;
@@ -41,10 +43,19 @@ const kw = (text: string, note?: string): SyntaxPart => ({ text, role: "keyword"
 const slot = (text: string, note?: string): SyntaxPart => ({ text, role: "slot", note });
 const lit = (text: string, note?: string): SyntaxPart => ({ text, role: "literal", note });
 
+const BASICS = "Querying basics";
+const AGG = "Aggregating";
+const JOINS = "Joining tables";
+const FURTHER = "Going further";
+const WRITES = "Changing data";
+const EXT = "Extensions";
+
 export const LESSONS: Lesson[] = [
+  // ----------------------------------------------------------------- Basics
   {
     id: "select-all",
     title: "Read a whole table",
+    section: BASICS,
     concept: "SELECT",
     databaseId: "shop",
     keyIdea: "`SELECT *` hands you **every column of every row** — the whole table.",
@@ -57,16 +68,12 @@ export const LESSONS: Lesson[] = [
   {
     id: "select-columns",
     title: "Pick specific columns",
+    section: BASICS,
     concept: "SELECT",
     databaseId: "shop",
     keyIdea: "Name the columns you want, in order — and skip the rest.",
     task: "List the `name` and `price` of **every** product.",
-    syntax: [
-      kw("SELECT"),
-      slot("<columns>", "comma-separated list"),
-      kw("FROM"),
-      slot("<table>"),
-    ],
+    syntax: [kw("SELECT"), slot("<columns>", "comma-separated list"), kw("FROM"), slot("<table>")],
     hint: "Put the column names after SELECT, separated by commas.",
     starterTemplate: "SELECT ${1:___}, ${2:___} FROM products;",
     solutionSql: "SELECT name, price FROM products;",
@@ -74,6 +81,7 @@ export const LESSONS: Lesson[] = [
   {
     id: "where-number",
     title: "Filter rows with WHERE",
+    section: BASICS,
     concept: "WHERE",
     databaseId: "shop",
     keyIdea: "`WHERE` is a gate: only rows that **pass the test** come through.",
@@ -93,6 +101,7 @@ export const LESSONS: Lesson[] = [
   {
     id: "where-text",
     title: "Combine conditions",
+    section: BASICS,
     concept: "WHERE",
     databaseId: "shop",
     keyIdea: "Chain tests with `AND` (both true) or `OR` (either true).",
@@ -114,8 +123,67 @@ export const LESSONS: Lesson[] = [
       "SELECT name, price FROM products WHERE category = 'Electronics' AND price < 60;",
   },
   {
+    id: "distinct",
+    title: "Remove duplicates",
+    section: BASICS,
+    concept: "DISTINCT",
+    databaseId: "shop",
+    keyIdea: "`DISTINCT` collapses duplicate rows, leaving **one of each**.",
+    task: "List each **distinct** product `category` (no repeats).",
+    syntax: [kw("SELECT"), kw("DISTINCT"), slot("<column>"), kw("FROM"), slot("<table>")],
+    hint: "SELECT DISTINCT category FROM products;",
+    starterTemplate: "SELECT DISTINCT ${1:___} FROM products;",
+    solutionSql: "SELECT DISTINCT category FROM products;",
+  },
+  {
+    id: "like",
+    title: "Match text patterns",
+    section: BASICS,
+    concept: "Pattern",
+    databaseId: "shop",
+    keyIdea: "`LIKE` matches a pattern; `%` stands for **any run of characters**.",
+    task: "List the `name` of products whose name contains **Desk** (use `LIKE`).",
+    syntax: [
+      kw("SELECT"),
+      slot("<columns>"),
+      kw("FROM"),
+      slot("<table>"),
+      kw("WHERE"),
+      slot("<column>"),
+      kw("LIKE"),
+      slot("'%text%'", "% matches anything around it"),
+    ],
+    hint: "WHERE name LIKE '%Desk%'  — % means any characters before/after.",
+    starterTemplate: "SELECT name FROM products WHERE ${1:___} LIKE ${2:___};",
+    solutionSql: "SELECT name FROM products WHERE name LIKE '%Desk%';",
+  },
+  {
+    id: "in",
+    title: "Match a list of values",
+    section: BASICS,
+    concept: "Sets",
+    databaseId: "shop",
+    keyIdea: "`IN (…)` tests membership in a list — shorthand for many `OR`s.",
+    task: "List the `name` and `category` of products in the **Home** or **Stationery** categories, using `IN`.",
+    syntax: [
+      kw("SELECT"),
+      slot("<columns>"),
+      kw("FROM"),
+      slot("<table>"),
+      kw("WHERE"),
+      slot("<column>"),
+      kw("IN"),
+      slot("(<v1>, <v2>)", "the allowed values"),
+    ],
+    hint: "WHERE category IN ('Home', 'Stationery')",
+    starterTemplate: "SELECT name, category FROM products WHERE ${1:___} IN (${2:___});",
+    solutionSql:
+      "SELECT name, category FROM products WHERE category IN ('Home', 'Stationery');",
+  },
+  {
     id: "order-limit",
     title: "Sort and limit",
+    section: BASICS,
     concept: "ORDER BY",
     databaseId: "shop",
     keyIdea: "`ORDER BY` sorts; `DESC` flips high→low; `LIMIT` takes the top slice.",
@@ -135,19 +203,17 @@ export const LESSONS: Lesson[] = [
     solutionSql: "SELECT name, price FROM products ORDER BY price DESC LIMIT 3;",
     orderMatters: true,
   },
+
+  // ------------------------------------------------------------- Aggregating
   {
     id: "count",
     title: "Count rows",
+    section: AGG,
     concept: "Aggregate",
     databaseId: "shop",
     keyIdea: "`count(*)` reports **how many rows** — one number, not a list.",
     task: "Count **how many customers** there are.",
-    syntax: [
-      kw("SELECT"),
-      lit("count(*)", "counts all rows"),
-      kw("FROM"),
-      slot("<table>"),
-    ],
+    syntax: [kw("SELECT"), lit("count(*)", "counts all rows"), kw("FROM"), slot("<table>")],
     hint: "SELECT count(*) FROM customers;",
     starterTemplate: "SELECT ${1:___} FROM customers;",
     solutionSql: "SELECT count(*) FROM customers;",
@@ -155,6 +221,7 @@ export const LESSONS: Lesson[] = [
   {
     id: "group-by",
     title: "Group and count",
+    section: AGG,
     concept: "GROUP BY",
     databaseId: "shop",
     keyIdea: "`GROUP BY` makes buckets; the aggregate runs **once per bucket**.",
@@ -175,6 +242,7 @@ export const LESSONS: Lesson[] = [
   {
     id: "having",
     title: "Filter groups with HAVING",
+    section: AGG,
     concept: "GROUP BY",
     databaseId: "shop",
     keyIdea: "`HAVING` is `WHERE` for groups — it filters **after** aggregating.",
@@ -195,9 +263,12 @@ export const LESSONS: Lesson[] = [
     solutionSql:
       "SELECT category, sum(stock) FROM products GROUP BY category HAVING sum(stock) > 100;",
   },
+
+  // ----------------------------------------------------------- Joining tables
   {
     id: "join",
     title: "Join two tables",
+    section: JOINS,
     concept: "JOIN",
     databaseId: "shop",
     keyIdea: "A `JOIN` glues two tables where a column in one **matches** a column in the other.",
@@ -219,8 +290,35 @@ export const LESSONS: Lesson[] = [
       "SELECT o.id, c.name FROM orders o JOIN customers c ON o.customer_id = c.id;",
   },
   {
+    id: "left-join",
+    title: "Keep unmatched rows (LEFT JOIN)",
+    section: JOINS,
+    concept: "JOIN",
+    databaseId: "shop",
+    keyIdea: "`LEFT JOIN` keeps **every left-table row**, filling NULLs where the right side has no match.",
+    task: "List every customer's `name` and **how many orders** they've placed — including customers with **zero** orders. Alias the count `orders`.",
+    syntax: [
+      kw("SELECT"),
+      slot("<columns>, count(...)"),
+      kw("FROM"),
+      slot("<left table>"),
+      kw("LEFT JOIN"),
+      slot("<right table>"),
+      kw("ON"),
+      slot("<keys match>"),
+      kw("GROUP BY"),
+      slot("<column>"),
+    ],
+    hint: "SELECT c.name, count(o.id) AS orders FROM customers c LEFT JOIN orders o ON o.customer_id = c.id GROUP BY c.name;  — count(o.id) is 0 when there are no orders.",
+    starterTemplate:
+      "SELECT c.name, count(o.id) AS orders\nFROM customers c\nLEFT JOIN orders o ON ${1:___}\nGROUP BY ${2:___};",
+    solutionSql:
+      "SELECT c.name, count(o.id) AS orders FROM customers c LEFT JOIN orders o ON o.customer_id = c.id GROUP BY c.name;",
+  },
+  {
     id: "join-aggregate",
     title: "Capstone: revenue per customer",
+    section: JOINS,
     concept: "JOIN",
     databaseId: "shop",
     keyIdea: "Real questions **chain joins**, then group + aggregate the result.",
@@ -247,9 +345,90 @@ export const LESSONS: Lesson[] = [
     solutionSql:
       "SELECT c.name, sum(oi.quantity * oi.unit_price) AS revenue FROM customers c JOIN orders o ON o.customer_id = c.id JOIN order_items oi ON oi.order_id = o.id GROUP BY c.name;",
   },
+
+  // ------------------------------------------------------------- Going further
+  {
+    id: "subquery",
+    title: "Subqueries",
+    section: FURTHER,
+    concept: "Subquery",
+    databaseId: "shop",
+    keyIdea: "A **subquery** is a query in parentheses whose result feeds the outer query.",
+    task: "List the `name` and `price` of products that cost **more than the average** product price.",
+    syntax: [
+      kw("SELECT"),
+      slot("<columns>"),
+      kw("FROM"),
+      slot("<table>"),
+      kw("WHERE"),
+      slot("<column> >"),
+      slot("( SELECT avg(...) FROM ... )", "runs first, returns one value"),
+    ],
+    hint: "WHERE price > (SELECT avg(price) FROM products)",
+    starterTemplate: "SELECT name, price FROM products WHERE price > (${1:___});",
+    solutionSql:
+      "SELECT name, price FROM products WHERE price > (SELECT avg(price) FROM products);",
+  },
+  {
+    id: "cte",
+    title: "Name a result with WITH (CTE)",
+    section: FURTHER,
+    concept: "CTE",
+    databaseId: "shop",
+    keyIdea: "`WITH` names a result up front (a CTE), so the main query can read it like a table.",
+    task: "Using a `WITH` clause, compute each `category`'s average price, then list categories whose average is **above 100**. Show `category` and the average (`avg_price`).",
+    syntax: [
+      kw("WITH"),
+      slot("<name>", "names the result"),
+      kw("AS"),
+      slot("( <query> )", "the inner query"),
+      kw("SELECT"),
+      slot("<columns>"),
+      kw("FROM"),
+      slot("<name>", "use it like a table"),
+      kw("WHERE"),
+      slot("<condition>"),
+    ],
+    hint: "WITH cat AS (SELECT category, avg(price) AS avg_price FROM products GROUP BY category) SELECT category, avg_price FROM cat WHERE avg_price > 100;",
+    starterTemplate:
+      "WITH cat AS (\n  ${1:___}\n)\nSELECT category, avg_price FROM cat WHERE ${2:___};",
+    solutionSql:
+      "WITH cat AS (SELECT category, avg(price) AS avg_price FROM products GROUP BY category) SELECT category, avg_price FROM cat WHERE avg_price > 100;",
+  },
+  {
+    id: "case",
+    title: "If/then logic with CASE",
+    section: FURTHER,
+    concept: "CASE",
+    databaseId: "shop",
+    keyIdea: "`CASE WHEN … THEN … ELSE … END` adds if/then logic to a column.",
+    task: "Show each product's `name` and a price **tier**: under 20 → `cheap`, under 100 → `mid`, otherwise → `pricey`. Alias it `tier`.",
+    syntax: [
+      kw("SELECT"),
+      slot("<column>,"),
+      kw("CASE WHEN"),
+      slot("<test>"),
+      kw("THEN"),
+      slot("<value>"),
+      lit("…"),
+      kw("ELSE"),
+      slot("<value>"),
+      kw("END"),
+      kw("FROM"),
+      slot("<table>"),
+    ],
+    hint: "CASE WHEN price < 20 THEN 'cheap' WHEN price < 100 THEN 'mid' ELSE 'pricey' END AS tier",
+    starterTemplate:
+      "SELECT name,\n  CASE WHEN ${1:___} THEN 'cheap'\n       WHEN ${2:___} THEN 'mid'\n       ELSE ${3:___} END AS tier\nFROM products;",
+    solutionSql:
+      "SELECT name, CASE WHEN price < 20 THEN 'cheap' WHEN price < 100 THEN 'mid' ELSE 'pricey' END AS tier FROM products;",
+  },
+
+  // ------------------------------------------------------------- Changing data
   {
     id: "insert",
     title: "Insert a row",
+    section: WRITES,
     concept: "Write",
     databaseId: "shop",
     keyIdea: "`INSERT` adds a brand-new row from the values you supply.",
@@ -272,6 +451,7 @@ export const LESSONS: Lesson[] = [
   {
     id: "update",
     title: "Update existing rows",
+    section: WRITES,
     concept: "Write",
     databaseId: "shop",
     keyIdea: "`UPDATE … SET` changes rows; `WHERE` picks which. **No `WHERE` = every row!**",
@@ -293,6 +473,7 @@ export const LESSONS: Lesson[] = [
   {
     id: "delete",
     title: "Delete rows",
+    section: WRITES,
     concept: "Write",
     databaseId: "shop",
     keyIdea: "`DELETE` removes rows matching `WHERE`. **Always check the `WHERE` first.**",
@@ -307,6 +488,94 @@ export const LESSONS: Lesson[] = [
     starterTemplate: "DELETE FROM customers WHERE ${1:___};",
     solutionSql: "DELETE FROM customers WHERE name = 'Noor Al-Sayed';",
     checkSql: "SELECT id, name FROM customers ORDER BY id;",
+  },
+
+  // ---------------------------------------------------------------- Extensions
+  {
+    id: "ext-vector",
+    title: "pgvector: similarity search",
+    section: EXT,
+    concept: "pgvector",
+    databaseId: "vec",
+    keyIdea: "`<->` measures **distance** between vectors; ordering by it = nearest-neighbour search.",
+    task: "Find the **2 documents most similar** to the query embedding `[1, 0, 0]`. Show their `title`, closest first.",
+    syntax: [
+      kw("SELECT"),
+      slot("<columns>"),
+      kw("FROM"),
+      slot("<table>"),
+      kw("ORDER BY"),
+      slot("<column> <-> '[…]'", "distance to the query vector"),
+      kw("LIMIT"),
+      slot("<n>"),
+    ],
+    hint: "SELECT title FROM documents ORDER BY embedding <-> '[1,0,0]' LIMIT 2;",
+    starterTemplate: "SELECT title FROM documents ORDER BY ${1:___} LIMIT ${2:___};",
+    solutionSql: "SELECT title FROM documents ORDER BY embedding <-> '[1,0,0]' LIMIT 2;",
+    orderMatters: true,
+  },
+  {
+    id: "ext-trgm",
+    title: "pg_trgm: fuzzy matching",
+    section: EXT,
+    concept: "pg_trgm",
+    databaseId: "fuzzy",
+    keyIdea: "`similarity(a, b)` scores how alike two strings are (0–1) using trigrams.",
+    task: "Find the **3 contacts whose `name` is most similar** to `Jonathan`. Show `name`, most similar first.",
+    syntax: [
+      kw("SELECT"),
+      slot("<columns>"),
+      kw("FROM"),
+      slot("<table>"),
+      kw("ORDER BY"),
+      slot("similarity(<col>, '<text>')", "higher = more alike"),
+      kw("DESC"),
+      kw("LIMIT"),
+      slot("<n>"),
+    ],
+    hint: "SELECT name FROM contacts ORDER BY similarity(name, 'Jonathan') DESC LIMIT 3;",
+    starterTemplate: "SELECT name FROM contacts ORDER BY ${1:___} DESC LIMIT ${2:___};",
+    solutionSql: "SELECT name FROM contacts ORDER BY similarity(name, 'Jonathan') DESC LIMIT 3;",
+    orderMatters: true,
+  },
+  {
+    id: "ext-hstore",
+    title: "hstore: key/value column",
+    section: EXT,
+    concept: "hstore",
+    databaseId: "kv",
+    keyIdea: "`hstore` stores key/value pairs in one column; `->` reads a value by key.",
+    task: "For each item in `catalog`, show its `name` and its **color** — the `color` key from `attrs`, aliased `color`.",
+    syntax: [
+      kw("SELECT"),
+      slot("<column>,"),
+      slot("attrs -> '<key>'", "reads a value by key"),
+      kw("FROM"),
+      slot("<table>"),
+    ],
+    hint: "SELECT name, attrs -> 'color' AS color FROM catalog;",
+    starterTemplate: "SELECT name, ${1:___} AS color FROM catalog;",
+    solutionSql: "SELECT name, attrs -> 'color' AS color FROM catalog;",
+  },
+  {
+    id: "ext-ltree",
+    title: "ltree: hierarchical paths",
+    section: EXT,
+    concept: "ltree",
+    databaseId: "tree",
+    keyIdea: "`ltree` paths model hierarchies; `<@` means **is a descendant of**.",
+    task: "List the `name` of every category **under** `all.electronics` (its descendants, including itself), using `<@`.",
+    syntax: [
+      kw("SELECT"),
+      slot("<columns>"),
+      kw("FROM"),
+      slot("<table>"),
+      kw("WHERE"),
+      slot("path <@ '<ancestor>'", "<@ = is a descendant of"),
+    ],
+    hint: "SELECT name FROM categories WHERE path <@ 'all.electronics';",
+    starterTemplate: "SELECT name FROM categories WHERE ${1:___};",
+    solutionSql: "SELECT name FROM categories WHERE path <@ 'all.electronics';",
   },
 ];
 

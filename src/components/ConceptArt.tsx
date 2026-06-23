@@ -11,12 +11,14 @@ const MUTED = "#8b949e";
 /** A small schematic illustration of what each concept does. */
 export function ConceptArt({ concept }: Props) {
   const c = conceptColor(concept);
+  const inner = render(concept, c);
+  if (!inner) return null; // concepts without an illustration just render nothing
   return (
     <figure className="concept-art">
       <svg viewBox="0 0 300 140" role="img" aria-label={`${concept} illustration`}>
-        {render(concept, c)}
+        {inner}
       </svg>
-      <figcaption>{CAPTIONS[concept] ?? ""}</figcaption>
+      {CAPTIONS[concept] && <figcaption>{CAPTIONS[concept]}</figcaption>}
     </figure>
   );
 }
@@ -29,6 +31,7 @@ const CAPTIONS: Record<string, string> = {
   "GROUP BY": "Rows fall into buckets; each bucket → one row.",
   JOIN: "Matching keys link rows across two tables.",
   Write: "Insert, update, or delete actual rows.",
+  pgvector: "Nearest vectors to the query point.",
 };
 
 function render(concept: string, c: string) {
@@ -183,6 +186,50 @@ function render(concept: string, c: string) {
           ))}
         </>
       );
+
+    case "pgvector": {
+      const q = { x: 62, y: 80 };
+      const pts = [
+        { x: 96, y: 62, near: true },
+        { x: 122, y: 98, near: true },
+        { x: 200, y: 40, near: false },
+        { x: 240, y: 92, near: false },
+        { x: 176, y: 112, near: false },
+        { x: 262, y: 54, near: false },
+      ];
+      return (
+        <>
+          {pts.map((p, i) => (
+            <g key={i}>
+              {p.near && (
+                <line
+                  x1={q.x}
+                  y1={q.y}
+                  x2={p.x}
+                  y2={p.y}
+                  stroke={c}
+                  strokeWidth={2}
+                  strokeDasharray="3 3"
+                />
+              )}
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={8}
+                fill={p.near ? c : ROW}
+                stroke={NEUTRAL}
+                opacity={p.near ? 1 : 0.6}
+              />
+            </g>
+          ))}
+          <circle cx={q.x} cy={q.y} r={11} fill="none" stroke={c} strokeWidth={2.5} />
+          <circle cx={q.x} cy={q.y} r={4} fill={c} />
+          <text x={q.x} y={q.y - 18} fill={c} fontSize="11" fontWeight="700" textAnchor="middle">
+            query
+          </text>
+        </>
+      );
+    }
 
     default:
       return null;

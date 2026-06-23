@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { LESSONS } from "../data/lessons";
 import { DATABASES } from "../data/databases";
 
@@ -41,20 +42,22 @@ export function Sidebar({
       </div>
 
       <nav className="lessons-nav">
-        <div className="nav-label">Lessons</div>
         {LESSONS.map((l, i) => {
           const active = view === "lesson" && l.id === activeLessonId;
+          const showSection = i === 0 || LESSONS[i - 1].section !== l.section;
           return (
-            <button
-              key={l.id}
-              className={`lesson-link${active ? " is-active" : ""}`}
-              onClick={() => onSelectLesson(l.id)}
-            >
-              <span className={`tick${done.has(l.id) ? " is-done" : ""}`}>
-                {done.has(l.id) ? "✓" : i + 1}
-              </span>
-              <span className="lesson-link__title">{l.title}</span>
-            </button>
+            <Fragment key={l.id}>
+              {showSection && <div className="nav-section">{l.section}</div>}
+              <button
+                className={`lesson-link${active ? " is-active" : ""}`}
+                onClick={() => onSelectLesson(l.id)}
+              >
+                <span className={`tick${done.has(l.id) ? " is-done" : ""}`}>
+                  {done.has(l.id) ? "✓" : i + 1}
+                </span>
+                <span className="lesson-link__title">{l.title}</span>
+              </button>
+            </Fragment>
           );
         })}
       </nav>

@@ -154,6 +154,81 @@ INSERT INTO loans (book_id, member_id, loaned_on, returned_on) VALUES
   (6, 2, '2024-04-20', '2024-05-10');
 `;
 
+// ---------------------------------------------------------------------------
+// Extension demo databases. Each `CREATE EXTENSION`s a Postgres extension that
+// PGlite bundles, so the lessons run for real in the browser.
+// ---------------------------------------------------------------------------
+const VEC_SEED = `
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE documents (
+  id         serial PRIMARY KEY,
+  title      text NOT NULL,
+  topic      text NOT NULL,
+  embedding  vector(3)
+);
+
+INSERT INTO documents (title, topic, embedding) VALUES
+  ('Intro to Postgres',    'databases', '[0.92, 0.10, 0.05]'),
+  ('Vector search guide',  'databases', '[0.80, 0.20, 0.12]'),
+  ('Cooking pasta',        'food',      '[0.05, 0.90, 0.08]'),
+  ('Italian recipes',      'food',      '[0.12, 0.82, 0.18]'),
+  ('Hiking the Alps',      'outdoors',  '[0.08, 0.12, 0.90]'),
+  ('Mountain guide',       'outdoors',  '[0.18, 0.05, 0.82]');
+`;
+
+const FUZZY_SEED = `
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+
+CREATE TABLE contacts (
+  id    serial PRIMARY KEY,
+  name  text NOT NULL
+);
+
+INSERT INTO contacts (name) VALUES
+  ('Jonathan Drake'),
+  ('Jonathon Drik'),
+  ('Nathan Drake'),
+  ('Jon Snow'),
+  ('Maria Lopez'),
+  ('Mariah Lopes');
+`;
+
+const KV_SEED = `
+CREATE EXTENSION IF NOT EXISTS hstore;
+
+CREATE TABLE catalog (
+  id     serial PRIMARY KEY,
+  name   text NOT NULL,
+  attrs  hstore
+);
+
+INSERT INTO catalog (name, attrs) VALUES
+  ('T-Shirt', 'color=>blue,  size=>M'),
+  ('Hoodie',  'color=>black, size=>L'),
+  ('Cap',     'color=>red,   size=>OneSize'),
+  ('Socks',   'color=>white, size=>M');
+`;
+
+const TREE_SEED = `
+CREATE EXTENSION IF NOT EXISTS ltree;
+
+CREATE TABLE categories (
+  id    serial PRIMARY KEY,
+  name  text NOT NULL,
+  path  ltree NOT NULL
+);
+
+INSERT INTO categories (name, path) VALUES
+  ('All',         'all'),
+  ('Electronics', 'all.electronics'),
+  ('Phones',      'all.electronics.phones'),
+  ('Laptops',     'all.electronics.laptops'),
+  ('Home',        'all.home'),
+  ('Kitchen',     'all.home.kitchen');
+`;
+
 export const DATABASES: SampleDatabase[] = [
   {
     id: "shop",
@@ -167,6 +242,30 @@ export const DATABASES: SampleDatabase[] = [
     name: "City Library",
     description: "Authors, books, members and loan history for a public library.",
     seedSql: LIBRARY_SEED,
+  },
+  {
+    id: "vec",
+    name: "Vector Search",
+    description: "Documents with 3-D embeddings — for pgvector similarity search.",
+    seedSql: VEC_SEED,
+  },
+  {
+    id: "fuzzy",
+    name: "Fuzzy Contacts",
+    description: "A contact list with near-duplicate names — for pg_trgm fuzzy matching.",
+    seedSql: FUZZY_SEED,
+  },
+  {
+    id: "kv",
+    name: "Key/Value Catalog",
+    description: "Products with an hstore column of attributes (color, size).",
+    seedSql: KV_SEED,
+  },
+  {
+    id: "tree",
+    name: "Category Tree",
+    description: "A category hierarchy stored as ltree paths.",
+    seedSql: TREE_SEED,
   },
 ];
 

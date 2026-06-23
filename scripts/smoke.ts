@@ -2,6 +2,11 @@
 // to prove the seeds + solutions actually execute and return sensible rows.
 // Run: node --experimental-strip-types scripts/smoke.ts
 import { PGlite } from "@electric-sql/pglite";
+import { vector } from "@electric-sql/pglite/vector";
+import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
+import { fuzzystrmatch } from "@electric-sql/pglite/contrib/fuzzystrmatch";
+import { hstore } from "@electric-sql/pglite/contrib/hstore";
+import { ltree } from "@electric-sql/pglite/contrib/ltree";
 import { DATABASES, getDatabase } from "../src/data/databases.ts";
 import { LESSONS } from "../src/data/lessons.ts";
 
@@ -11,7 +16,9 @@ const fail = (msg: string) => {
   console.error("  ✗ " + msg);
 };
 
-const db = await PGlite.create();
+const db = await PGlite.create({
+  extensions: { vector, pg_trgm, fuzzystrmatch, hstore, ltree },
+});
 
 async function loadSeed(seedId: string) {
   const d = getDatabase(seedId);
