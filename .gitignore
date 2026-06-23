@@ -1,0 +1,8 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.wrangler
+.dev.vars
+npm-debug.log*

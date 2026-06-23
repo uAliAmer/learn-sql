@@ -1,0 +1,8 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "learn-sql",
+  "compatibility_date": "2026-06-23",
+  // Static SPA — Vite builds the client-only app (PGlite runs in the browser)
+  // into ./dist, which Pages serves directly. No server-side bindings needed.
+  "pages_build_output_dir": "./dist"
+}

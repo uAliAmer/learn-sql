@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/LessonPanel.tsx","./src/components/ResultTable.tsx","./src/components/SchemaViewer.tsx","./src/components/Sidebar.tsx","./src/components/SqlEditor.tsx","./src/data/databases.ts","./src/data/lessons.ts","./src/db/pglite.ts","./src/lib/markdown.tsx"],"version":"5.9.3"}
