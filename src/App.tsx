@@ -166,6 +166,7 @@ export default function App() {
               lesson={lesson}
               index={lessonIndex}
               total={LESSONS.length}
+              completedCount={done.size}
               check={check}
               isDone={done.has(lesson.id)}
               onNext={lessonIndex < LESSONS.length - 1 ? goNext : undefined}

@@ -412,6 +412,127 @@ body {
   font-size: 12px;
 }
 
+/* ---------------- Infographic lesson elements ---------------- */
+.concept-tag {
+  font-size: 13px;
+  font-weight: 600;
+  margin: -2px 0 14px;
+}
+.lesson__remain {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.key-idea {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: var(--panel-2);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.key-idea__bulb {
+  font-size: 18px;
+  line-height: 1.4;
+}
+.key-idea__text p {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.concept-art {
+  margin: 0 0 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px 6px;
+}
+.concept-art svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.concept-art figcaption {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.syntax {
+  margin: 16px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--panel-2);
+}
+.syntax__label {
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.syntax__line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+.tok {
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.tok--keyword {
+  background: rgba(163, 113, 247, 0.18);
+  color: #d2a8ff;
+  font-weight: 700;
+}
+.tok--table {
+  background: rgba(88, 166, 255, 0.16);
+  color: #79c0ff;
+}
+.tok--column {
+  background: rgba(57, 182, 80, 0.14);
+  color: #7ee787;
+}
+.tok--literal {
+  background: var(--chip);
+  color: #cdd9e5;
+}
+.tok--fill {
+  background: rgba(210, 153, 34, 0.14);
+  color: #e3b341;
+  border: 1px dashed #e3b341;
+}
+.tok--mini {
+  padding: 1px 6px;
+  font-size: 12px;
+}
+.syntax__notes {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.syntax__notes li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.syntax__note {
+  color: var(--muted);
+}
+
 @media (max-width: 900px) {
   .app {
     grid-template-columns: 1fr;
