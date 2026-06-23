@@ -831,6 +831,9 @@ body {
   max-height: 92vh;
   overflow: auto;
 }
+.modal__card--narrow {
+  width: min(460px, 100%);
+}
 .modal__head {
   display: flex;
   justify-content: space-between;

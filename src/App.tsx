@@ -4,6 +4,7 @@ import { SqlEditor, type SqlEditorHandle } from "./components/SqlEditor";
 import { ResultTable } from "./components/ResultTable";
 import { DiffView } from "./components/DiffView";
 import { CertificateModal } from "./components/CertificateModal";
+import { NameModal } from "./components/NameModal";
 import { SchemaViewer } from "./components/SchemaViewer";
 import { LessonPanel, type CheckState } from "./components/LessonPanel";
 import { LESSONS, getLesson } from "./data/lessons";
@@ -42,20 +43,13 @@ export default function App() {
   const [userName, setUserName] = useState<string>(loadName);
   const [nameLocked, setNameLocked] = useState<boolean>(loadNameLocked);
 
-  const saveName = useCallback((n: string) => {
+  // Confirm + lock the name in one step, so it can't be re-issued to someone
+  // else. Called from the dedicated name modal.
+  const confirmName = useCallback((n: string) => {
     setUserName(n);
-    try {
-      localStorage.setItem("learn-sql:name:v1", n);
-    } catch {
-      /* best-effort */
-    }
-  }, []);
-
-  // Lock the name after the learner confirms it, so it can't be re-issued
-  // to someone else.
-  const confirmName = useCallback(() => {
     setNameLocked(true);
     try {
+      localStorage.setItem("learn-sql:name:v1", n);
       localStorage.setItem("learn-sql:name-locked:v1", "1");
     } catch {
       /* best-effort */
@@ -292,17 +286,21 @@ export default function App() {
         </section>
       </main>
 
-      {showCert && (
-        <CertificateModal
-          name={userName}
-          locked={nameLocked}
-          onName={saveName}
-          onConfirm={confirmName}
-          lessonCount={LESSONS.length}
-          sectionCount={SECTION_COUNT}
-          onClose={() => setShowCert(false)}
-        />
-      )}
+      {showCert &&
+        (nameLocked ? (
+          <CertificateModal
+            name={userName}
+            lessonCount={LESSONS.length}
+            sectionCount={SECTION_COUNT}
+            onClose={() => setShowCert(false)}
+          />
+        ) : (
+          <NameModal
+            initial={userName}
+            onSubmit={confirmName}
+            onClose={() => setShowCert(false)}
+          />
+        ))}
     </div>
   );
 }
