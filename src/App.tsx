@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "./components/Sidebar";
-import { SqlEditor } from "./components/SqlEditor";
+import { SqlEditor, type SqlEditorHandle } from "./components/SqlEditor";
 import { ResultTable } from "./components/ResultTable";
 import { SchemaViewer } from "./components/SchemaViewer";
 import { LessonPanel, type CheckState } from "./components/LessonPanel";
@@ -22,18 +22,24 @@ const PLAYGROUND_STARTER: Record<string, string> = {
   library: "-- Free play. Write any SQL and press Run (Ctrl/Cmd + Enter).\nSELECT * FROM books;",
 };
 
+function templateFor(view: View, lessonId: string, playgroundDbId: string): string {
+  if (view === "lesson") return getLesson(lessonId)!.starterTemplate;
+  return PLAYGROUND_STARTER[playgroundDbId] ?? "SELECT 1;";
+}
+
 export default function App() {
   const [view, setView] = useState<View>("lesson");
   const [activeLessonId, setActiveLessonId] = useState<string>(LESSONS[0].id);
   const [playgroundDbId, setPlaygroundDbId] = useState<string>("shop");
   const [done, setDone] = useState<Set<string>>(loadProgress);
 
-  const [sql, setSql] = useState<string>(LESSONS[0].starterSql);
   const [results, setResults] = useState<QueryResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [schema, setSchema] = useState<TableInfo[]>([]);
   const [ready, setReady] = useState(false);
   const [check, setCheck] = useState<CheckState>({ status: "idle" });
+
+  const editorRef = useRef<SqlEditorHandle>(null);
 
   const lesson = view === "lesson" ? getLesson(activeLessonId) : undefined;
   const seedId = view === "lesson" ? lesson!.databaseId : playgroundDbId;
@@ -48,9 +54,7 @@ export default function App() {
     }
   }, [done]);
 
-  // Load / reset the database whenever the active context changes.
-  const editorRef = useRef<string>(sql);
-  editorRef.current = sql;
+  // Load / reset the database + editor whenever the active context changes.
   useEffect(() => {
     let cancelled = false;
     setReady(false);
@@ -63,11 +67,7 @@ export default function App() {
       const tables = await getSchema();
       if (cancelled) return;
       setSchema(tables);
-      setSql(
-        view === "lesson"
-          ? getLesson(activeLessonId)!.starterSql
-          : PLAYGROUND_STARTER[playgroundDbId] ?? "SELECT 1;",
-      );
+      editorRef.current?.load(templateFor(view, activeLessonId, playgroundDbId));
       setReady(true);
     })();
     return () => {
@@ -83,7 +83,7 @@ export default function App() {
   const run = useCallback(async () => {
     setCheck({ status: "idle" });
     try {
-      const res = await runQuery(editorRef.current);
+      const res = await runQuery(editorRef.current?.getValue() ?? "");
       setResults(res);
       setError(null);
       await refreshSchema(); // writes may change the data/schema
@@ -97,7 +97,7 @@ export default function App() {
     if (!lesson) return;
     setCheck({ status: "checking" });
     const r = await checkAnswer({
-      userSql: editorRef.current,
+      userSql: editorRef.current?.getValue() ?? "",
       solutionSql: lesson.solutionSql,
       checkSql: lesson.checkSql,
       orderMatters: lesson.orderMatters,
@@ -115,7 +115,8 @@ export default function App() {
     } else {
       setCheck({
         status: "fail",
-        message: "The rows returned don't match what's expected. Compare your result to the task and try again.",
+        message:
+          "The rows returned don't match what's expected. Compare your result to the task and try again.",
       });
     }
   }, [lesson]);
@@ -128,18 +129,15 @@ export default function App() {
     }
   }, [activeLessonId]);
 
-  const insertSnippet = useCallback((snippet: string) => {
-    setSql((s) => (s.endsWith(" ") || s.length === 0 ? s + snippet : s + " " + snippet));
-  }, []);
-
   const resetDb = useCallback(async () => {
     const db = getDatabase(seedId);
     await loadDatabase(db.id, db.seedSql);
     await refreshSchema();
+    editorRef.current?.load(templateFor(view, activeLessonId, playgroundDbId));
     setResults([]);
     setError(null);
     setCheck({ status: "idle" });
-  }, [seedId, refreshSchema]);
+  }, [seedId, view, activeLessonId, playgroundDbId, refreshSchema]);
 
   const lessonIndex = LESSONS.findIndex((l) => l.id === activeLessonId);
   const activeDb = getDatabase(seedId);
@@ -185,12 +183,16 @@ export default function App() {
 
           <div className="schema-wrap">
             <div className="nav-label">Schema · {activeDb.name}</div>
-            <SchemaViewer tables={schema} onPick={insertSnippet} />
+            <SchemaViewer tables={schema} onPick={(s) => editorRef.current?.insertAtCursor(s)} />
           </div>
         </section>
 
         <section className="panel panel--right">
-          <SqlEditor value={sql} onChange={setSql} onRun={run} />
+          <SqlEditor
+            ref={editorRef}
+            onRun={run}
+            onEdit={() => setCheck((c) => (c.status === "idle" ? c : { status: "idle" }))}
+          />
           <div className="toolbar">
             <button className="btn btn--primary" onClick={run} disabled={!ready}>
               ▶ Run <kbd>⌘↵</kbd>

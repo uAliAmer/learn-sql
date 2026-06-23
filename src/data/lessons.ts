@@ -23,7 +23,8 @@ export interface Lesson {
    */
   syntax: SyntaxPart[];
   hint: string;
-  starterSql: string;
+  /** Starter shown in the editor. `${n:label}` marks a fill-in-the-blank field. */
+  starterTemplate: string;
   /** Reference answer used to grade. */
   solutionSql: string;
   /**
@@ -50,7 +51,7 @@ export const LESSONS: Lesson[] = [
     task: "Return **every column** of **every row** in the `products` table.",
     syntax: [kw("SELECT"), lit("*", "means: all columns"), kw("FROM"), slot("<table>", "which table to read")],
     hint: "SELECT * FROM table_name;",
-    starterSql: "SELECT * FROM products;",
+    starterTemplate: "SELECT * FROM products;",
     solutionSql: "SELECT * FROM products;",
   },
   {
@@ -67,7 +68,7 @@ export const LESSONS: Lesson[] = [
       slot("<table>"),
     ],
     hint: "Put the column names after SELECT, separated by commas.",
-    starterSql: "SELECT ___, ___ FROM products;",
+    starterTemplate: "SELECT ${1:column}, ${2:column} FROM products;",
     solutionSql: "SELECT name, price FROM products;",
   },
   {
@@ -86,7 +87,7 @@ export const LESSONS: Lesson[] = [
       slot("<condition>", "a test, e.g. column > value"),
     ],
     hint: "... WHERE price > 50;",
-    starterSql: "SELECT name, price FROM products WHERE ___;",
+    starterTemplate: "SELECT name, price FROM products WHERE ${1:condition};",
     solutionSql: "SELECT name, price FROM products WHERE price > 50;",
   },
   {
@@ -107,8 +108,8 @@ export const LESSONS: Lesson[] = [
       slot("<condition>", "both tests must hold"),
     ],
     hint: "Text values go in single quotes: category = 'Electronics'. Join two conditions with AND.",
-    starterSql:
-      "SELECT name, price FROM products WHERE category = '___' AND ___;",
+    starterTemplate:
+      "SELECT name, price FROM products WHERE ${1:condition} AND ${2:condition};",
     solutionSql:
       "SELECT name, price FROM products WHERE category = 'Electronics' AND price < 60;",
   },
@@ -130,7 +131,7 @@ export const LESSONS: Lesson[] = [
       slot("<n>", "how many rows"),
     ],
     hint: "ORDER BY price DESC LIMIT 3. DESC = high → low.",
-    starterSql: "SELECT name, price FROM products ORDER BY ___ LIMIT ___;",
+    starterTemplate: "SELECT name, price FROM products ORDER BY ${1:sort} LIMIT ${2:n};",
     solutionSql: "SELECT name, price FROM products ORDER BY price DESC LIMIT 3;",
     orderMatters: true,
   },
@@ -148,7 +149,7 @@ export const LESSONS: Lesson[] = [
       slot("<table>"),
     ],
     hint: "SELECT count(*) FROM customers;",
-    starterSql: "SELECT ___ FROM customers;",
+    starterTemplate: "SELECT ${1:aggregate} FROM customers;",
     solutionSql: "SELECT count(*) FROM customers;",
   },
   {
@@ -168,7 +169,7 @@ export const LESSONS: Lesson[] = [
       slot("<column>", "the bucket key"),
     ],
     hint: "SELECT category, count(*) FROM products GROUP BY category;",
-    starterSql: "SELECT category, ___ FROM products GROUP BY ___;",
+    starterTemplate: "SELECT category, ${1:aggregate} FROM products GROUP BY ${2:column};",
     solutionSql: "SELECT category, count(*) FROM products GROUP BY category;",
   },
   {
@@ -189,8 +190,8 @@ export const LESSONS: Lesson[] = [
       slot("<test on aggregate>", "filters whole groups"),
     ],
     hint: "GROUP BY category HAVING sum(stock) > 100",
-    starterSql:
-      "SELECT category, sum(stock) FROM products GROUP BY category HAVING ___;",
+    starterTemplate:
+      "SELECT category, sum(stock) FROM products GROUP BY category HAVING ${1:condition};",
     solutionSql:
       "SELECT category, sum(stock) FROM products GROUP BY category HAVING sum(stock) > 100;",
   },
@@ -212,8 +213,8 @@ export const LESSONS: Lesson[] = [
       slot("<a.key = b.key>", "the matching columns"),
     ],
     hint: "SELECT o.id, c.name FROM orders o JOIN customers c ON o.customer_id = c.id;",
-    starterSql:
-      "SELECT o.id, c.name\nFROM orders o\nJOIN customers c ON ___ = ___;",
+    starterTemplate:
+      "SELECT o.id, c.name\nFROM orders o\nJOIN customers c ON ${1:left_key} = ${2:right_key};",
     solutionSql:
       "SELECT o.id, c.name FROM orders o JOIN customers c ON o.customer_id = c.id;",
   },
@@ -241,8 +242,8 @@ export const LESSONS: Lesson[] = [
       slot("<column>", "one row per customer"),
     ],
     hint: "JOIN orders ON orders.customer_id = customers.id, then JOIN order_items ON order_items.order_id = orders.id, then GROUP BY the customer and SUM(quantity * unit_price).",
-    starterSql:
-      "SELECT c.name, sum(oi.quantity * oi.unit_price) AS revenue\nFROM customers c\nJOIN orders o ON ___\nJOIN order_items oi ON ___\nGROUP BY ___;",
+    starterTemplate:
+      "SELECT c.name, sum(oi.quantity * oi.unit_price) AS revenue\nFROM customers c\nJOIN orders o ON ${1:join_condition}\nJOIN order_items oi ON ${2:join_condition}\nGROUP BY ${3:column};",
     solutionSql:
       "SELECT c.name, sum(oi.quantity * oi.unit_price) AS revenue FROM customers c JOIN orders o ON o.customer_id = c.id JOIN order_items oi ON oi.order_id = o.id GROUP BY c.name;",
   },
@@ -261,8 +262,8 @@ export const LESSONS: Lesson[] = [
       slot("(<values>)", "in the same order as the columns"),
     ],
     hint: "INSERT INTO products (name, category, price, stock) VALUES ('Laptop Stand', 'Home', 45.00, 50);",
-    starterSql:
-      "INSERT INTO products (name, category, price, stock)\nVALUES (___);",
+    starterTemplate:
+      "INSERT INTO products (name, category, price, stock)\nVALUES (${1:values});",
     solutionSql:
       "INSERT INTO products (name, category, price, stock) VALUES ('Laptop Stand', 'Home', 45.00, 50);",
     checkSql:
@@ -284,7 +285,7 @@ export const LESSONS: Lesson[] = [
       slot("<condition>", "which rows — don't forget it!"),
     ],
     hint: "UPDATE products SET price = 27.00 WHERE name = 'Wireless Mouse';  (Don't forget WHERE, or you'd change every row!)",
-    starterSql: "UPDATE products SET ___ WHERE ___;",
+    starterTemplate: "UPDATE products SET ${1:column = value} WHERE ${2:condition};",
     solutionSql:
       "UPDATE products SET price = 27.00 WHERE name = 'Wireless Mouse';",
     checkSql: "SELECT name, price FROM products ORDER BY name;",
@@ -303,7 +304,7 @@ export const LESSONS: Lesson[] = [
       slot("<condition>", "which rows to remove"),
     ],
     hint: "DELETE FROM customers WHERE name = 'Noor Al-Sayed';",
-    starterSql: "DELETE FROM customers WHERE ___;",
+    starterTemplate: "DELETE FROM customers WHERE ${1:condition};",
     solutionSql: "DELETE FROM customers WHERE name = 'Noor Al-Sayed';",
     checkSql: "SELECT id, name FROM customers ORDER BY id;",
   },

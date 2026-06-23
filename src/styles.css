@@ -345,6 +345,15 @@ body {
   border-radius: 10px;
   overflow: hidden;
 }
+/* Fill-in-the-blank snippet fields: amber dashed placeholders. */
+.cm-snippetField {
+  background: rgba(210, 153, 34, 0.16);
+  outline: 1px dashed rgba(227, 179, 65, 0.55);
+  border-radius: 3px;
+}
+.cm-editor .cm-snippetFieldPosition {
+  border-left: 2px solid #e3b341;
+}
 .toolbar {
   display: flex;
   gap: 10px;
