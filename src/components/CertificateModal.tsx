@@ -3,20 +3,42 @@ import { Certificate } from "./Certificate";
 
 interface Props {
   name: string;
+  locked: boolean;
   onName: (n: string) => void;
+  onConfirm: () => void;
   lessonCount: number;
   sectionCount: number;
   onClose: () => void;
 }
 
-export function CertificateModal({ name, onName, lessonCount, sectionCount, onClose }: Props) {
+export function CertificateModal({
+  name,
+  locked,
+  onName,
+  onConfirm,
+  lessonCount,
+  sectionCount,
+  onClose,
+}: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const dateStr = new Date().toLocaleDateString(undefined, {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
-  const display = name.trim() || "SQL Learner";
+  const trimmed = name.trim();
+  const display = trimmed || "SQL Learner";
+
+  const confirm = () => {
+    if (!trimmed) return;
+    if (
+      window.confirm(
+        `Issue the certificate to "${trimmed}"?\n\nThis name is locked once confirmed and cannot be changed.`,
+      )
+    ) {
+      onConfirm();
+    }
+  };
 
   return (
     <div className="modal" onClick={onClose}>
@@ -27,20 +49,33 @@ export function CertificateModal({ name, onName, lessonCount, sectionCount, onCl
             ✕
           </button>
         </div>
-        <p className="muted">
-          You finished all {lessonCount} lessons. Add your name and download your certificate.
-        </p>
+        <p className="muted">You finished all {lessonCount} lessons.</p>
 
-        <label className="modal__name">
-          ✍️ Enter your name (it appears on the certificate)
-          <input
-            value={name}
-            onChange={(e) => onName(e.target.value)}
-            placeholder="e.g. Ali Amer"
-            maxLength={40}
-            autoFocus
-          />
-        </label>
+        {locked ? (
+          <div className="modal__locked">
+            🔒 Issued to <strong>{display}</strong> — this name is locked.
+          </div>
+        ) : (
+          <>
+            <label className="modal__name">
+              ✍️ Enter your name — it goes on the certificate and{" "}
+              <strong>can't be changed after you confirm</strong>.
+              <input
+                value={name}
+                onChange={(e) => onName(e.target.value)}
+                placeholder="e.g. Ali Amer"
+                maxLength={40}
+                autoFocus
+              />
+            </label>
+            <div className="modal__confirm">
+              <button className="btn btn--primary" disabled={!trimmed} onClick={confirm}>
+                ✓ Confirm name
+              </button>
+              <span className="muted">Confirm to unlock the download.</span>
+            </div>
+          </>
+        )}
 
         <div className="cert-wrap">
           <Certificate
@@ -53,15 +88,21 @@ export function CertificateModal({ name, onName, lessonCount, sectionCount, onCl
         </div>
 
         <div className="modal__actions">
-          <button
-            className="btn btn--primary"
-            onClick={() => svgRef.current && downloadPng(svgRef.current, display)}
-          >
-            ⬇ Download PNG
-          </button>
-          <button className="btn btn--ghost" onClick={() => window.print()}>
-            🖨 Print
-          </button>
+          {locked ? (
+            <>
+              <button
+                className="btn btn--primary"
+                onClick={() => svgRef.current && downloadPng(svgRef.current, display)}
+              >
+                ⬇ Download PNG
+              </button>
+              <button className="btn btn--ghost" onClick={() => window.print()}>
+                🖨 Print
+              </button>
+            </>
+          ) : (
+            <span className="muted">Confirm your name above to download the certificate.</span>
+          )}
           <button className="btn btn--ghost" onClick={onClose}>
             Close
           </button>

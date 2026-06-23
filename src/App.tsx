@@ -40,11 +40,23 @@ export default function App() {
   const [streak, setStreak] = useState<number>(currentStreak);
   const [showCert, setShowCert] = useState(false);
   const [userName, setUserName] = useState<string>(loadName);
+  const [nameLocked, setNameLocked] = useState<boolean>(loadNameLocked);
 
   const saveName = useCallback((n: string) => {
     setUserName(n);
     try {
       localStorage.setItem("learn-sql:name:v1", n);
+    } catch {
+      /* best-effort */
+    }
+  }, []);
+
+  // Lock the name after the learner confirms it, so it can't be re-issued
+  // to someone else.
+  const confirmName = useCallback(() => {
+    setNameLocked(true);
+    try {
+      localStorage.setItem("learn-sql:name-locked:v1", "1");
     } catch {
       /* best-effort */
     }
@@ -283,7 +295,9 @@ export default function App() {
       {showCert && (
         <CertificateModal
           name={userName}
+          locked={nameLocked}
           onName={saveName}
+          onConfirm={confirmName}
           lessonCount={LESSONS.length}
           sectionCount={SECTION_COUNT}
           onClose={() => setShowCert(false)}
@@ -307,5 +321,13 @@ function loadName(): string {
     return localStorage.getItem("learn-sql:name:v1") ?? "";
   } catch {
     return "";
+  }
+}
+
+function loadNameLocked(): boolean {
+  try {
+    return localStorage.getItem("learn-sql:name-locked:v1") === "1";
+  } catch {
+    return false;
   }
 }

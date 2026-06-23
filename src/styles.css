@@ -866,6 +866,21 @@ body {
   padding: 8px 10px;
   font-size: 15px;
 }
+.modal__confirm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.modal__locked {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  margin: 12px 0;
+}
 .cert-wrap {
   border: 1px solid var(--border);
   border-radius: 10px;
