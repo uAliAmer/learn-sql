@@ -5,6 +5,7 @@ import { ResultTable } from "./components/ResultTable";
 import { DiffView } from "./components/DiffView";
 import { CertificateView } from "./components/CertificateView";
 import { NameModal } from "./components/NameModal";
+import { ConfirmModal } from "./components/ConfirmModal";
 import { SchemaViewer } from "./components/SchemaViewer";
 import { LessonPanel, type CheckState } from "./components/LessonPanel";
 import { LESSONS, getLesson } from "./data/lessons";
@@ -42,6 +43,7 @@ export default function App() {
   const [userName, setUserName] = useState<string>(loadName);
   const [nameLocked, setNameLocked] = useState<boolean>(loadNameLocked);
   const [showNameModal, setShowNameModal] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const [results, setResults] = useState<QueryResult[]>([]);
   const [comparison, setComparison] = useState<{ expected: QueryResult; actual: QueryResult } | null>(null);
@@ -196,13 +198,19 @@ export default function App() {
     setCheck({ status: "idle" });
   }, [seedId, view, activeLessonId, playgroundDbId, refreshSchema]);
 
-  const resetProgress = useCallback(() => {
+  // Wipe progress AND the certificate name/lock.
+  const resetAll = useCallback(() => {
     setDone(new Set());
+    setUserName("");
+    setNameLocked(false);
     try {
       localStorage.removeItem("learn-sql:progress:v1");
+      localStorage.removeItem("learn-sql:name:v1");
+      localStorage.removeItem("learn-sql:name-locked:v1");
     } catch {
       /* best-effort */
     }
+    setShowResetConfirm(false);
   }, []);
 
   const lessonIndex = LESSONS.findIndex((l) => l.id === activeLessonId);
@@ -224,7 +232,7 @@ export default function App() {
         onOpenPlayground={() => setView("playground")}
         onOpenCertificate={() => setView("certificate")}
         onSelectPlaygroundDb={setPlaygroundDbId}
-        onResetProgress={resetProgress}
+        onResetProgress={() => setShowResetConfirm(true)}
       />
 
       {view === "certificate" ? (
@@ -310,6 +318,22 @@ export default function App() {
             setShowNameModal(false);
           }}
           onClose={() => setShowNameModal(false)}
+        />
+      )}
+
+      {showResetConfirm && (
+        <ConfirmModal
+          title="Reset everything?"
+          message={
+            <>
+              This clears all your lesson progress and the name on your certificate.
+              <br />
+              This can't be undone.
+            </>
+          }
+          confirmLabel="Reset everything"
+          onConfirm={resetAll}
+          onClose={() => setShowResetConfirm(false)}
         />
       )}
     </div>

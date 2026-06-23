@@ -436,6 +436,11 @@ body {
 .btn--ghost {
   background: transparent;
 }
+.btn--danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
 .btn--small {
   padding: 5px 12px;
   font-size: 13px;
