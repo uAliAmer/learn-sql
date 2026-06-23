@@ -7,9 +7,11 @@ interface Props {
   activeLessonId: string | null;
   playgroundDbId: string;
   done: Set<string>;
+  streak: number;
   onSelectLesson: (id: string) => void;
   onOpenPlayground: () => void;
   onSelectPlaygroundDb: (id: string) => void;
+  onResetProgress: () => void;
 }
 
 export function Sidebar({
@@ -17,10 +19,21 @@ export function Sidebar({
   activeLessonId,
   playgroundDbId,
   done,
+  streak,
   onSelectLesson,
   onOpenPlayground,
   onSelectPlaygroundDb,
+  onResetProgress,
 }: Props) {
+  // Per-section completion counts.
+  const stats = new Map<string, { total: number; done: number }>();
+  for (const l of LESSONS) {
+    const s = stats.get(l.section) ?? { total: 0, done: 0 };
+    s.total++;
+    if (done.has(l.id)) s.done++;
+    stats.set(l.section, s);
+  }
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -32,7 +45,12 @@ export function Sidebar({
       </div>
 
       <div className="sidebar__progress">
-        {done.size} / {LESSONS.length} lessons complete
+        <div className="sidebar__progress-row">
+          <span>
+            {done.size} / {LESSONS.length} lessons
+          </span>
+          {streak > 0 && <span className="streak">🔥 {streak}-day streak</span>}
+        </div>
         <div className="bar">
           <div
             className="bar__fill"
@@ -45,9 +63,18 @@ export function Sidebar({
         {LESSONS.map((l, i) => {
           const active = view === "lesson" && l.id === activeLessonId;
           const showSection = i === 0 || LESSONS[i - 1].section !== l.section;
+          const st = stats.get(l.section)!;
+          const complete = st.done === st.total;
           return (
             <Fragment key={l.id}>
-              {showSection && <div className="nav-section">{l.section}</div>}
+              {showSection && (
+                <div className={`nav-section${complete ? " is-complete" : ""}`}>
+                  <span>{l.section}</span>
+                  <span className="nav-section__count">
+                    {complete ? "✓ done" : `${st.done}/${st.total}`}
+                  </span>
+                </div>
+              )}
               <button
                 className={`lesson-link${active ? " is-active" : ""}`}
                 onClick={() => onSelectLesson(l.id)}
@@ -88,14 +115,14 @@ export function Sidebar({
         )}
       </div>
 
-      <a
-        className="sidebar__footer"
-        href="https://github.com/uAliAmer/learn-sql"
-        target="_blank"
-        rel="noreferrer"
-      >
-        source on GitHub ↗
-      </a>
+      <div className="sidebar__footer">
+        <button className="reset-progress" onClick={onResetProgress}>
+          Reset progress
+        </button>
+        <a href="https://github.com/uAliAmer/learn-sql" target="_blank" rel="noreferrer">
+          source ↗
+        </a>
+      </div>
     </aside>
   );
 }

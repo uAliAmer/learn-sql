@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useRef } from "react";
 import CodeMirror, { type ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { sql, PostgreSQL } from "@codemirror/lang-sql";
 import { snippet } from "@codemirror/autocomplete";
+import { Compartment } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 
 export interface SqlEditorHandle {
@@ -13,6 +14,8 @@ export interface SqlEditorHandle {
   load: (template: string) => void;
   /** Insert text at the cursor (used by the schema viewer). */
   insertAtCursor: (text: string) => void;
+  /** Feed the live DB schema so the editor can autocomplete table/column names. */
+  setSchema: (schema: Record<string, string[]>) => void;
   /** Current editor contents. */
   getValue: () => string;
 }
@@ -30,6 +33,8 @@ export const SqlEditor = forwardRef<SqlEditorHandle, Props>(function SqlEditor(
   const cmRef = useRef<ReactCodeMirrorRef>(null);
   // A template requested before the view existed; applied on create.
   const pending = useRef<string | null>(null);
+  // Lets us swap the SQL extension's schema for autocomplete without remounting.
+  const schemaComp = useRef(new Compartment());
 
   const applyLoad = (view: EditorView, template: string) => {
     // `snippet()` parses ${} fields and selects the first; plain text just
@@ -56,6 +61,13 @@ export const SqlEditor = forwardRef<SqlEditorHandle, Props>(function SqlEditor(
       });
       view.focus();
     },
+    setSchema(schema) {
+      const view = cmRef.current?.view;
+      if (!view) return;
+      view.dispatch({
+        effects: schemaComp.current.reconfigure(sql({ dialect: PostgreSQL, schema })),
+      });
+    },
     getValue() {
       return cmRef.current?.view?.state.doc.toString() ?? "";
     },
@@ -76,7 +88,7 @@ export const SqlEditor = forwardRef<SqlEditorHandle, Props>(function SqlEditor(
         value=""
         height="180px"
         theme="dark"
-        extensions={[sql({ dialect: PostgreSQL })]}
+        extensions={[schemaComp.current.of(sql({ dialect: PostgreSQL }))]}
         onChange={() => onEdit()}
         onCreateEditor={(view) => {
           if (pending.current != null) {

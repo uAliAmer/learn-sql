@@ -59,7 +59,7 @@ export function ResultTable({ result, error }: Props) {
   );
 }
 
-function formatCell(v: unknown): string {
+export function formatCell(v: unknown): string {
   if (v === null || v === undefined) return "∅";
   if (v instanceof Date) return v.toISOString().slice(0, 10);
   if (typeof v === "object") return JSON.stringify(v);

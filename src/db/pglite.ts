@@ -154,6 +154,11 @@ function stableStringify(row: Record<string, unknown>): string {
   return JSON.stringify(keys.map((k) => [k, normalizeValue(row[k])]));
 }
 
+/** Stable per-row key, matching how grading compares result sets. */
+export function rowKey(row: Record<string, unknown>): string {
+  return stableStringify(row);
+}
+
 function normalizeValue(v: unknown): unknown {
   if (v instanceof Date) return v.toISOString();
   if (typeof v === "number") return Math.round(v * 1e6) / 1e6;

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { SqlEditor, type SqlEditorHandle } from "./components/SqlEditor";
 import { ResultTable } from "./components/ResultTable";
+import { DiffView } from "./components/DiffView";
 import { SchemaViewer } from "./components/SchemaViewer";
 import { LessonPanel, type CheckState } from "./components/LessonPanel";
 import { LESSONS, getLesson } from "./data/lessons";
 import { getDatabase } from "./data/databases";
+import { currentStreak, bumpStreak } from "./lib/streak";
 import {
   loadDatabase,
   runQuery,
@@ -24,7 +26,7 @@ const PLAYGROUND_STARTER: Record<string, string> = {
 
 function templateFor(view: View, lessonId: string, playgroundDbId: string): string {
   if (view === "lesson") return getLesson(lessonId)!.starterTemplate;
-  return PLAYGROUND_STARTER[playgroundDbId] ?? "SELECT 1;";
+  return PLAYGROUND_STARTER[playgroundDbId] ?? "SELECT * FROM information_schema.tables;";
 }
 
 export default function App() {
@@ -32,8 +34,10 @@ export default function App() {
   const [activeLessonId, setActiveLessonId] = useState<string>(LESSONS[0].id);
   const [playgroundDbId, setPlaygroundDbId] = useState<string>("shop");
   const [done, setDone] = useState<Set<string>>(loadProgress);
+  const [streak, setStreak] = useState<number>(currentStreak);
 
   const [results, setResults] = useState<QueryResult[]>([]);
+  const [comparison, setComparison] = useState<{ expected: QueryResult; actual: QueryResult } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [schema, setSchema] = useState<TableInfo[]>([]);
   const [ready, setReady] = useState(false);
@@ -54,11 +58,24 @@ export default function App() {
     }
   }, [done]);
 
+  // Push the schema both to the viewer and to the editor's autocomplete.
+  const applySchema = useCallback((tables: TableInfo[]) => {
+    setSchema(tables);
+    editorRef.current?.setSchema(
+      Object.fromEntries(tables.map((t) => [t.name, t.columns.map((c) => c.name)])),
+    );
+  }, []);
+
+  const refreshSchema = useCallback(async () => {
+    applySchema(await getSchema());
+  }, [applySchema]);
+
   // Load / reset the database + editor whenever the active context changes.
   useEffect(() => {
     let cancelled = false;
     setReady(false);
     setResults([]);
+    setComparison(null);
     setError(null);
     setCheck({ status: "idle" });
     (async () => {
@@ -66,7 +83,7 @@ export default function App() {
       await loadDatabase(db.id, db.seedSql);
       const tables = await getSchema();
       if (cancelled) return;
-      setSchema(tables);
+      applySchema(tables);
       editorRef.current?.load(templateFor(view, activeLessonId, playgroundDbId));
       setReady(true);
     })();
@@ -76,12 +93,9 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contextKey]);
 
-  const refreshSchema = useCallback(async () => {
-    setSchema(await getSchema());
-  }, []);
-
   const run = useCallback(async () => {
     setCheck({ status: "idle" });
+    setComparison(null);
     try {
       const res = await runQuery(editorRef.current?.getValue() ?? "");
       setResults(res);
@@ -109,21 +123,29 @@ export default function App() {
       checkSql: lesson.checkSql,
       orderMatters: lesson.orderMatters,
     });
-    if (r.actual) setResults([r.actual]);
     if (r.error) {
       setError(r.error);
+      setResults([]);
+      setComparison(null);
       setCheck({ status: "fail", message: "Your SQL raised an error — see below." });
       return;
     }
     setError(null);
     if (r.pass) {
+      setComparison(null);
+      setResults(r.actual ? [r.actual] : []);
       setCheck({ status: "pass" });
       setDone((prev) => new Set(prev).add(lesson.id));
+      setStreak(bumpStreak());
     } else {
+      setResults([]);
+      setComparison(r.expected && r.actual ? { expected: r.expected, actual: r.actual } : null);
       setCheck({
         status: "fail",
         message:
-          "The rows returned don't match what's expected. Compare your result to the task and try again.",
+          r.expected && r.actual
+            ? "Compare the expected rows with yours below."
+            : "The result doesn't match what's expected. Try again.",
       });
     }
   }, [lesson, refreshSchema]);
@@ -142,9 +164,19 @@ export default function App() {
     await refreshSchema();
     editorRef.current?.load(templateFor(view, activeLessonId, playgroundDbId));
     setResults([]);
+    setComparison(null);
     setError(null);
     setCheck({ status: "idle" });
   }, [seedId, view, activeLessonId, playgroundDbId, refreshSchema]);
+
+  const resetProgress = useCallback(() => {
+    setDone(new Set());
+    try {
+      localStorage.removeItem("learn-sql:progress:v1");
+    } catch {
+      /* best-effort */
+    }
+  }, []);
 
   const lessonIndex = LESSONS.findIndex((l) => l.id === activeLessonId);
   const activeDb = getDatabase(seedId);
@@ -156,12 +188,14 @@ export default function App() {
         activeLessonId={activeLessonId}
         playgroundDbId={playgroundDbId}
         done={done}
+        streak={streak}
         onSelectLesson={(id) => {
           setView("lesson");
           setActiveLessonId(id);
         }}
         onOpenPlayground={() => setView("playground")}
         onSelectPlaygroundDb={setPlaygroundDbId}
+        onResetProgress={resetProgress}
       />
 
       <main className="main">
@@ -215,7 +249,9 @@ export default function App() {
           </div>
 
           <div className="results">
-            {results.length === 0 ? (
+            {comparison ? (
+              <DiffView expected={comparison.expected} actual={comparison.actual} />
+            ) : results.length === 0 ? (
               <ResultTable result={null} error={error} />
             ) : (
               results.map((r, i) => <ResultTable key={i} result={r} error={null} />)
