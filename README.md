@@ -1,5 +1,7 @@
 # 🐘 Learn SQL
 
+**▶ Live demo: https://learn-sql-101.pages.dev**
+
 An interactive web app for learning SQL against a **real Postgres database that
 runs entirely in your browser** — no server, no signup, nothing to install.
 
