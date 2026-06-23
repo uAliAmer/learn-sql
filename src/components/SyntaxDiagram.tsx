@@ -13,7 +13,9 @@ export function SyntaxDiagram({ parts }: Props) {
   const notes = parts.filter((p) => p.note);
   return (
     <div className="syntax">
-      <div className="syntax__label">Anatomy</div>
+      <div className="syntax__label">
+        Query pattern <span className="syntax__hint">— dashed parts are what you write</span>
+      </div>
       <div className="syntax__line">
         {parts.map((p, i) => (
           <span key={i} className={`tok tok--${p.role}`}>

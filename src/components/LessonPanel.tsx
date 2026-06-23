@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Lesson } from "../data/lessons";
 import { renderText } from "../lib/markdown";
-import { conceptColor, conceptTagline } from "../data/concepts";
+import { conceptColor } from "../data/concepts";
 import { ConceptArt } from "./ConceptArt";
 import { SyntaxDiagram } from "./SyntaxDiagram";
 
@@ -30,6 +30,7 @@ export function LessonPanel({
   isDone,
   onNext,
 }: Props) {
+  const [showLearn, setShowLearn] = useState(true);
   const [showHint, setShowHint] = useState(false);
   const color = conceptColor(lesson.concept);
   const remaining = Math.max(0, total - completedCount);
@@ -51,23 +52,36 @@ export function LessonPanel({
       </div>
 
       <h2>{lesson.title}</h2>
-      <div className="concept-tag" style={{ color }}>
-        {conceptTagline(lesson.concept)}
+
+      {/* The hero: the one thing to do. */}
+      <div className="task">
+        <span className="task__label">🎯 Your task</span>
+        <div className="task__body">{renderText(lesson.task)}</div>
       </div>
 
-      <div className="key-idea" style={{ borderColor: color }}>
-        <span className="key-idea__bulb">💡</span>
-        <div className="key-idea__text">{renderText(lesson.keyIdea)}</div>
-      </div>
+      {/* Supporting teaching material, collapsible. */}
+      <button
+        className="learn-toggle"
+        type="button"
+        onClick={() => setShowLearn((s) => !s)}
+        aria-expanded={showLearn}
+      >
+        {showLearn ? "▾" : "▸"} How it works
+      </button>
 
-      <ConceptArt concept={lesson.concept} />
-
-      <div className="lesson__prompt">{renderText(lesson.prompt)}</div>
-
-      <SyntaxDiagram parts={lesson.syntax} />
+      {showLearn && (
+        <div className="learn">
+          <div className="key-idea" style={{ borderColor: color }}>
+            <span className="key-idea__bulb">💡</span>
+            <div className="key-idea__text">{renderText(lesson.keyIdea)}</div>
+          </div>
+          <ConceptArt concept={lesson.concept} />
+          <SyntaxDiagram parts={lesson.syntax} />
+        </div>
+      )}
 
       <button className="link" type="button" onClick={() => setShowHint((s) => !s)}>
-        {showHint ? "Hide hint" : "Show hint"}
+        {showHint ? "Hide hint" : "Show hint (reveals the answer)"}
       </button>
       {showHint && <pre className="lesson__hint">{lesson.hint}</pre>}
 

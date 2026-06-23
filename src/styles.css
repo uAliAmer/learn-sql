@@ -440,14 +440,65 @@ body {
 }
 
 /* ---------------- Infographic lesson elements ---------------- */
-.concept-tag {
-  font-size: 13px;
-  font-weight: 600;
-  margin: -2px 0 14px;
-}
 .lesson__remain {
   color: var(--muted);
   font-size: 12px;
+}
+
+/* The task hero — the main thing on the lesson. */
+.task {
+  background: rgba(88, 166, 255, 0.1);
+  border: 1px solid var(--accent);
+  border-left-width: 4px;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 6px 0 18px;
+}
+.task__label {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.task__body p {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: #f0f6fc;
+}
+.task__body code {
+  background: rgba(13, 17, 23, 0.6);
+  padding: 1px 6px;
+  border-radius: 5px;
+  color: #79c0ff;
+  font-size: 0.92em;
+}
+
+.learn-toggle {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 0;
+  margin-bottom: 6px;
+}
+.learn-toggle:hover {
+  color: var(--text);
+}
+.learn {
+  margin-bottom: 6px;
+}
+.syntax__hint {
+  text-transform: none;
+  letter-spacing: 0;
+  color: #6e7681;
+  font-weight: 400;
 }
 
 .key-idea {
@@ -533,7 +584,7 @@ body {
   background: var(--chip);
   color: #cdd9e5;
 }
-.tok--fill {
+.tok--slot {
   background: rgba(210, 153, 34, 0.14);
   color: #e3b341;
   border: 1px dashed #e3b341;
