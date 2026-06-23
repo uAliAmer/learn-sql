@@ -3,7 +3,7 @@ import { Sidebar } from "./components/Sidebar";
 import { SqlEditor, type SqlEditorHandle } from "./components/SqlEditor";
 import { ResultTable } from "./components/ResultTable";
 import { DiffView } from "./components/DiffView";
-import { CertificateModal } from "./components/CertificateModal";
+import { CertificateView } from "./components/CertificateView";
 import { NameModal } from "./components/NameModal";
 import { SchemaViewer } from "./components/SchemaViewer";
 import { LessonPanel, type CheckState } from "./components/LessonPanel";
@@ -19,7 +19,7 @@ import {
   type TableInfo,
 } from "./db/pglite";
 
-type View = "lesson" | "playground";
+type View = "lesson" | "playground" | "certificate";
 
 const PLAYGROUND_STARTER: Record<string, string> = {
   shop: "-- Free play. Write any SQL and press Run (Ctrl/Cmd + Enter).\nSELECT * FROM products;",
@@ -39,22 +39,9 @@ export default function App() {
   const [playgroundDbId, setPlaygroundDbId] = useState<string>("shop");
   const [done, setDone] = useState<Set<string>>(loadProgress);
   const [streak, setStreak] = useState<number>(currentStreak);
-  const [showCert, setShowCert] = useState(false);
   const [userName, setUserName] = useState<string>(loadName);
   const [nameLocked, setNameLocked] = useState<boolean>(loadNameLocked);
-
-  // Confirm + lock the name in one step, so it can't be re-issued to someone
-  // else. Called from the dedicated name modal.
-  const confirmName = useCallback((n: string) => {
-    setUserName(n);
-    setNameLocked(true);
-    try {
-      localStorage.setItem("learn-sql:name:v1", n);
-      localStorage.setItem("learn-sql:name-locked:v1", "1");
-    } catch {
-      /* best-effort */
-    }
-  }, []);
+  const [showNameModal, setShowNameModal] = useState(false);
 
   const [results, setResults] = useState<QueryResult[]>([]);
   const [comparison, setComparison] = useState<{ expected: QueryResult; actual: QueryResult } | null>(null);
@@ -67,7 +54,24 @@ export default function App() {
 
   const lesson = view === "lesson" ? getLesson(activeLessonId) : undefined;
   const seedId = view === "lesson" ? lesson!.databaseId : playgroundDbId;
-  const contextKey = view === "lesson" ? `lesson:${activeLessonId}` : `pg:${playgroundDbId}`;
+  const contextKey =
+    view === "certificate"
+      ? "certificate"
+      : view === "lesson"
+        ? `lesson:${activeLessonId}`
+        : `pg:${playgroundDbId}`;
+
+  // Confirm + lock the name in one step, so it can't be re-issued to someone else.
+  const confirmName = useCallback((n: string) => {
+    setUserName(n);
+    setNameLocked(true);
+    try {
+      localStorage.setItem("learn-sql:name:v1", n);
+      localStorage.setItem("learn-sql:name-locked:v1", "1");
+    } catch {
+      /* best-effort */
+    }
+  }, []);
 
   // Persist progress.
   useEffect(() => {
@@ -78,7 +82,6 @@ export default function App() {
     }
   }, [done]);
 
-  // Push the schema both to the viewer and to the editor's autocomplete.
   const applySchema = useCallback((tables: TableInfo[]) => {
     setSchema(tables);
     editorRef.current?.setSchema(
@@ -92,6 +95,10 @@ export default function App() {
 
   // Load / reset the database + editor whenever the active context changes.
   useEffect(() => {
+    if (view === "certificate") {
+      setReady(true);
+      return;
+    }
     let cancelled = false;
     setReady(false);
     setResults([]);
@@ -120,7 +127,7 @@ export default function App() {
       const res = await runQuery(editorRef.current?.getValue() ?? "");
       setResults(res);
       setError(null);
-      await refreshSchema(); // writes may change the data/schema
+      await refreshSchema();
     } catch (err) {
       setError((err as Error).message);
       setResults([]);
@@ -130,8 +137,6 @@ export default function App() {
   const grade = useCallback(async () => {
     if (!lesson) return;
     setCheck({ status: "checking" });
-    // For write/index lessons, grade from a clean seed so a prior manual Run
-    // (e.g. creating the index to inspect EXPLAIN) can't taint the result.
     if (lesson.checkSql) {
       const db = getDatabase(lesson.databaseId);
       await loadDatabase(db.id, db.seedSql);
@@ -155,12 +160,10 @@ export default function App() {
       setComparison(null);
       setResults(r.actual ? [r.actual] : []);
       setCheck({ status: "pass" });
-      // If this completes the final lesson, celebrate with the certificate.
-      if (!done.has(lesson.id) && done.size + 1 >= LESSONS.length) {
-        setShowCert(true);
-      }
+      const finishedAll = !done.has(lesson.id) && done.size + 1 >= LESSONS.length;
       setDone((prev) => new Set(prev).add(lesson.id));
       setStreak(bumpStreak());
+      if (finishedAll) setView("certificate"); // celebrate: jump to the certificate
     } else {
       setResults([]);
       setComparison(r.expected && r.actual ? { expected: r.expected, actual: r.actual } : null);
@@ -203,7 +206,7 @@ export default function App() {
   }, []);
 
   const lessonIndex = LESSONS.findIndex((l) => l.id === activeLessonId);
-  const activeDb = getDatabase(seedId);
+  const activeDb = view === "certificate" ? null : getDatabase(seedId);
 
   return (
     <div className="app">
@@ -219,88 +222,96 @@ export default function App() {
           setActiveLessonId(id);
         }}
         onOpenPlayground={() => setView("playground")}
+        onOpenCertificate={() => setView("certificate")}
         onSelectPlaygroundDb={setPlaygroundDbId}
         onResetProgress={resetProgress}
-        onShowCertificate={() => setShowCert(true)}
       />
 
-      <main className="main">
-        <section className="panel panel--left">
-          {view === "lesson" && lesson ? (
-            <LessonPanel
-              lesson={lesson}
-              index={lessonIndex}
-              total={LESSONS.length}
-              completedCount={done.size}
-              check={check}
-              isDone={done.has(lesson.id)}
-              onNext={lessonIndex < LESSONS.length - 1 ? goNext : undefined}
-            />
-          ) : (
-            <div className="lesson">
-              <span className="chip">Playground</span>
-              <h2>{activeDb.name}</h2>
-              <p className="lesson__prompt">{activeDb.description}</p>
-              <p className="muted">
-                No grading here — run anything you like. Use the schema on the right, and
-                hit <strong>Reset data</strong> to restore the sample rows.
-              </p>
-            </div>
-          )}
-
-          <div className="schema-wrap">
-            <div className="nav-label">Schema · {activeDb.name}</div>
-            <SchemaViewer tables={schema} onPick={(s) => editorRef.current?.insertAtCursor(s)} />
-          </div>
-        </section>
-
-        <section className="panel panel--right">
-          <SqlEditor
-            ref={editorRef}
-            onRun={run}
-            onEdit={() => setCheck((c) => (c.status === "idle" ? c : { status: "idle" }))}
-          />
-          <div className="toolbar">
-            <button className="btn btn--primary" onClick={run} disabled={!ready}>
-              ▶ Run <kbd>⌘↵</kbd>
-            </button>
-            {view === "lesson" && (
-              <button className="btn btn--check" onClick={grade} disabled={!ready}>
-                ✓ Check answer
-              </button>
-            )}
-            <button className="btn btn--ghost" onClick={resetDb} disabled={!ready}>
-              ↺ Reset data
-            </button>
-          </div>
-
-          <div className="results">
-            {comparison ? (
-              <DiffView expected={comparison.expected} actual={comparison.actual} />
-            ) : results.length === 0 ? (
-              <ResultTable result={null} error={error} />
-            ) : (
-              results.map((r, i) => <ResultTable key={i} result={r} error={null} />)
-            )}
-          </div>
-        </section>
-      </main>
-
-      {showCert &&
-        (nameLocked ? (
-          <CertificateModal
-            name={userName}
-            lessonCount={LESSONS.length}
+      {view === "certificate" ? (
+        <main className="main main--single">
+          <CertificateView
+            doneCount={done.size}
+            total={LESSONS.length}
             sectionCount={SECTION_COUNT}
-            onClose={() => setShowCert(false)}
+            name={userName}
+            locked={nameLocked}
+            onClaim={() => setShowNameModal(true)}
           />
-        ) : (
-          <NameModal
-            initial={userName}
-            onSubmit={confirmName}
-            onClose={() => setShowCert(false)}
-          />
-        ))}
+        </main>
+      ) : (
+        <main className="main">
+          <section className="panel panel--left">
+            {view === "lesson" && lesson ? (
+              <LessonPanel
+                lesson={lesson}
+                index={lessonIndex}
+                total={LESSONS.length}
+                completedCount={done.size}
+                check={check}
+                isDone={done.has(lesson.id)}
+                onNext={lessonIndex < LESSONS.length - 1 ? goNext : undefined}
+              />
+            ) : (
+              <div className="lesson">
+                <span className="chip">Playground</span>
+                <h2>{activeDb!.name}</h2>
+                <p className="lesson__prompt">{activeDb!.description}</p>
+                <p className="muted">
+                  No grading here — run anything you like. Use the schema on the right, and
+                  hit <strong>Reset data</strong> to restore the sample rows.
+                </p>
+              </div>
+            )}
+
+            <div className="schema-wrap">
+              <div className="nav-label">Schema · {activeDb!.name}</div>
+              <SchemaViewer tables={schema} onPick={(s) => editorRef.current?.insertAtCursor(s)} />
+            </div>
+          </section>
+
+          <section className="panel panel--right">
+            <SqlEditor
+              ref={editorRef}
+              onRun={run}
+              onEdit={() => setCheck((c) => (c.status === "idle" ? c : { status: "idle" }))}
+            />
+            <div className="toolbar">
+              <button className="btn btn--primary" onClick={run} disabled={!ready}>
+                ▶ Run <kbd>⌘↵</kbd>
+              </button>
+              {view === "lesson" && (
+                <button className="btn btn--check" onClick={grade} disabled={!ready}>
+                  ✓ Check answer
+                </button>
+              )}
+              <button className="btn btn--ghost" onClick={resetDb} disabled={!ready}>
+                ↺ Reset data
+              </button>
+            </div>
+
+            <div className="results">
+              {comparison ? (
+                <DiffView expected={comparison.expected} actual={comparison.actual} />
+              ) : results.length === 0 ? (
+                <ResultTable result={null} error={error} />
+              ) : (
+                results.map((r, i) => <ResultTable key={i} result={r} error={null} />)
+              )}
+            </div>
+          </section>
+        </main>
+      )}
+
+      {showNameModal && (
+        <NameModal
+          initial={userName}
+          onSubmit={(n) => {
+            confirmName(n);
+            setShowNameModal(false);
+          }}
+          onClose={() => setShowNameModal(false)}
+        />
+      )}
     </div>
   );
 }

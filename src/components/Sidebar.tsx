@@ -3,7 +3,7 @@ import { LESSONS } from "../data/lessons";
 import { DATABASES } from "../data/databases";
 
 interface Props {
-  view: "lesson" | "playground";
+  view: "lesson" | "playground" | "certificate";
   activeLessonId: string | null;
   playgroundDbId: string;
   done: Set<string>;
@@ -13,7 +13,7 @@ interface Props {
   onOpenPlayground: () => void;
   onSelectPlaygroundDb: (id: string) => void;
   onResetProgress: () => void;
-  onShowCertificate: () => void;
+  onOpenCertificate: () => void;
 }
 
 export function Sidebar({
@@ -27,7 +27,7 @@ export function Sidebar({
   onOpenPlayground,
   onSelectPlaygroundDb,
   onResetProgress,
-  onShowCertificate,
+  onOpenCertificate,
 }: Props) {
   // Per-section completion counts.
   const stats = new Map<string, { total: number; done: number }>();
@@ -61,11 +61,6 @@ export function Sidebar({
             style={{ width: `${(done.size / LESSONS.length) * 100}%` }}
           />
         </div>
-        {allComplete && (
-          <button className="cert-btn" onClick={onShowCertificate}>
-            🎓 View certificate
-          </button>
-        )}
       </div>
 
       <nav className="lessons-nav">
@@ -122,6 +117,15 @@ export function Sidebar({
             ))}
           </div>
         )}
+
+        <button
+          className={`lesson-link${view === "certificate" ? " is-active" : ""}`}
+          onClick={onOpenCertificate}
+        >
+          <span className="tick">🎓</span>
+          <span className="lesson-link__title">Certificate</span>
+          {allComplete && <span className="badge-ready">ready</span>}
+        </button>
       </div>
 
       <div className="sidebar__footer">
