@@ -32,11 +32,11 @@ export function CertificateModal({ name, onName, lessonCount, sectionCount, onCl
         </p>
 
         <label className="modal__name">
-          Name on certificate
+          ✍️ Enter your name (it appears on the certificate)
           <input
             value={name}
             onChange={(e) => onName(e.target.value)}
-            placeholder="Your name"
+            placeholder="e.g. Ali Amer"
             maxLength={40}
             autoFocus
           />
