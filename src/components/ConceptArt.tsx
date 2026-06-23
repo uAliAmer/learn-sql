@@ -31,6 +31,7 @@ const CAPTIONS: Record<string, string> = {
   "GROUP BY": "Rows fall into buckets; each bucket → one row.",
   JOIN: "Matching keys link rows across two tables.",
   Write: "Insert, update, or delete actual rows.",
+  Index: "An index skips the full scan, straight to the rows.",
   pgvector: "Nearest vectors to the query point.",
 };
 
@@ -186,6 +187,52 @@ function render(concept: string, c: string) {
           ))}
         </>
       );
+
+    case "Index": {
+      const match = 3;
+      const rows = [0, 1, 2, 3, 4, 5];
+      const y = (r: number) => 35 + r * 15;
+      return (
+        <>
+          <text x={73} y={18} fill={MUTED} fontSize="11" textAnchor="middle">
+            Seq Scan
+          </text>
+          <text x={227} y={18} fill={c} fontSize="11" textAnchor="middle" fontWeight="700">
+            Index
+          </text>
+          {rows.map((r) => (
+            <g key={`l${r}`}>
+              <rect x={38} y={30 + r * 15} width={72} height={11} rx={3} fill={ROW} stroke={NEUTRAL} opacity={0.7} />
+              <circle cx={28} cy={y(r)} r={2.5} fill={MUTED} />
+            </g>
+          ))}
+          <text x={73} y={132} fill={MUTED} fontSize="10" textAnchor="middle">
+            checks every row
+          </text>
+          {rows.map((r) => (
+            <rect
+              key={`r${r}`}
+              x={192}
+              y={30 + r * 15}
+              width={72}
+              height={11}
+              rx={3}
+              fill={r === match ? c : ROW}
+              stroke={NEUTRAL}
+              opacity={r === match ? 1 : 0.55}
+            />
+          ))}
+          <line x1={150} y1={y(match)} x2={188} y2={y(match)} stroke={c} strokeWidth={2.5} />
+          <polygon
+            points={`188,${y(match) - 4} 188,${y(match) + 4} 195,${y(match)}`}
+            fill={c}
+          />
+          <text x={227} y={132} fill={c} fontSize="10" textAnchor="middle">
+            jumps to match
+          </text>
+        </>
+      );
+    }
 
     case "pgvector": {
       const q = { x: 62, y: 80 };

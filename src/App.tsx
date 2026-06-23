@@ -96,6 +96,13 @@ export default function App() {
   const grade = useCallback(async () => {
     if (!lesson) return;
     setCheck({ status: "checking" });
+    // For write/index lessons, grade from a clean seed so a prior manual Run
+    // (e.g. creating the index to inspect EXPLAIN) can't taint the result.
+    if (lesson.checkSql) {
+      const db = getDatabase(lesson.databaseId);
+      await loadDatabase(db.id, db.seedSql);
+      await refreshSchema();
+    }
     const r = await checkAnswer({
       userSql: editorRef.current?.getValue() ?? "",
       solutionSql: lesson.solutionSql,
@@ -119,7 +126,7 @@ export default function App() {
           "The rows returned don't match what's expected. Compare your result to the task and try again.",
       });
     }
-  }, [lesson]);
+  }, [lesson, refreshSchema]);
 
   const goNext = useCallback(() => {
     const idx = LESSONS.findIndex((l) => l.id === activeLessonId);

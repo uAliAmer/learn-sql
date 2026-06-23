@@ -229,6 +229,30 @@ INSERT INTO categories (name, path) VALUES
   ('Kitchen',     'all.home.kitchen');
 `;
 
+// A deliberately large table (5,000 rows) so indexes make a visible
+// difference in EXPLAIN: Seq Scan without one, Index Scan with one.
+const BIG_SEED = `
+CREATE EXTENSION IF NOT EXISTS bloom;
+
+CREATE TABLE events (
+  id          serial PRIMARY KEY,
+  email       text NOT NULL,
+  country     text NOT NULL,
+  plan        text NOT NULL,
+  status      text NOT NULL,
+  created_at  date NOT NULL
+);
+
+INSERT INTO events (email, country, plan, status, created_at)
+SELECT
+  'user' || g || '@example.com',
+  (ARRAY['US','UK','NG','JP','BR','IN'])[1 + (g % 6)],
+  (ARRAY['free','pro','team','enterprise'])[1 + (g % 4)],
+  (ARRAY['active','trial','churned'])[1 + (g % 3)],
+  DATE '2024-01-01' + (g % 365)
+FROM generate_series(1, 5000) AS g;
+`;
+
 export const DATABASES: SampleDatabase[] = [
   {
     id: "shop",
@@ -266,6 +290,12 @@ export const DATABASES: SampleDatabase[] = [
     name: "Category Tree",
     description: "A category hierarchy stored as ltree paths.",
     seedSql: TREE_SEED,
+  },
+  {
+    id: "big",
+    name: "Events (5k rows)",
+    description: "A large events table — for seeing how indexes avoid scanning everything.",
+    seedSql: BIG_SEED,
   },
 ];
 

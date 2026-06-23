@@ -12,12 +12,13 @@ change the data.
 
 ## Features
 
-- **24 guided lessons** in 6 sections — from `SELECT *` through joins,
-  subqueries, CTEs and `CASE`, plus real **Postgres extensions**
-  (pgvector similarity search, pg_trgm fuzzy matching, hstore, ltree) — all
-  with automatic answer checking.
-- **Playground mode** — free-form SQL against six sample databases
-  (an online shop, a city library, and four extension demos).
+- **26 guided lessons** in 7 sections — from `SELECT *` through joins,
+  subqueries, CTEs and `CASE`, **indexes** (B-tree + bloom, on a 5,000-row
+  table so `EXPLAIN` flips from Seq Scan to Index Scan), plus real **Postgres
+  extensions** (pgvector similarity search, pg_trgm fuzzy matching, hstore,
+  ltree) — all with automatic answer checking.
+- **Playground mode** — free-form SQL against seven sample databases
+  (an online shop, a city library, a 5k-row events table, and four extension demos).
 - **Live schema viewer** — click a table or column to drop it into the editor.
 - **Progress saved** locally (localStorage), so your checkmarks persist.
 - **Real Postgres dialect** — `serial`, `numeric`, `JOIN`, `HAVING`, etc.

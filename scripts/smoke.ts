@@ -7,6 +7,7 @@ import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { fuzzystrmatch } from "@electric-sql/pglite/contrib/fuzzystrmatch";
 import { hstore } from "@electric-sql/pglite/contrib/hstore";
 import { ltree } from "@electric-sql/pglite/contrib/ltree";
+import { bloom } from "@electric-sql/pglite/contrib/bloom";
 import { DATABASES, getDatabase } from "../src/data/databases.ts";
 import { LESSONS } from "../src/data/lessons.ts";
 
@@ -17,7 +18,7 @@ const fail = (msg: string) => {
 };
 
 const db = await PGlite.create({
-  extensions: { vector, pg_trgm, fuzzystrmatch, hstore, ltree },
+  extensions: { vector, pg_trgm, fuzzystrmatch, hstore, ltree, bloom },
 });
 
 async function loadSeed(seedId: string) {

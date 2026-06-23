@@ -48,6 +48,7 @@ const AGG = "Aggregating";
 const JOINS = "Joining tables";
 const FURTHER = "Going further";
 const WRITES = "Changing data";
+const INDEXES = "Indexes";
 const EXT = "Extensions";
 
 export const LESSONS: Lesson[] = [
@@ -488,6 +489,49 @@ export const LESSONS: Lesson[] = [
     starterTemplate: "DELETE FROM customers WHERE ${1:___};",
     solutionSql: "DELETE FROM customers WHERE name = 'Noor Al-Sayed';",
     checkSql: "SELECT id, name FROM customers ORDER BY id;",
+  },
+
+  // ------------------------------------------------------------------- Indexes
+  {
+    id: "btree-index",
+    title: "Speed up lookups with an index",
+    section: INDEXES,
+    concept: "Index",
+    databaseId: "big",
+    keyIdea: "An **index** lets Postgres jump straight to matching rows instead of scanning the whole table.",
+    task: "The `events` table has **5,000 rows**. A lookup by `email` reads them all — try `EXPLAIN SELECT * FROM events WHERE email = 'user500@example.com';` and you'll see **Seq Scan**. Create an index on `email` so Postgres can jump straight to matches.",
+    syntax: [
+      kw("CREATE INDEX"),
+      kw("ON"),
+      slot("<table>"),
+      slot("(<column>)", "the column to index"),
+    ],
+    hint: "CREATE INDEX ON events (email);  — then re-run the EXPLAIN: it becomes an Index Scan.",
+    starterTemplate: "CREATE INDEX ON events (${1:___});",
+    solutionSql: "CREATE INDEX ON events (email);",
+    checkSql:
+      "SELECT count(*) > 0 AS ok FROM pg_indexes WHERE tablename = 'events' AND indexdef ILIKE '%btree (email)%';",
+  },
+  {
+    id: "bloom-index",
+    title: "bloom: index many columns at once",
+    section: INDEXES,
+    concept: "bloom",
+    databaseId: "big",
+    keyIdea: "A **bloom** index covers many columns in one — ideal when queries filter **arbitrary combinations** by equality.",
+    task: "Users filter `events` by any mix of `country`, `plan`, and `status`. Instead of three separate indexes, create **one `bloom` index** covering all three columns. (Then `EXPLAIN SELECT * FROM events WHERE country = 'US' AND status = 'active';` shows a Bitmap Index Scan.)",
+    syntax: [
+      kw("CREATE INDEX"),
+      kw("ON"),
+      slot("<table>"),
+      kw("USING bloom"),
+      slot("(<col>, <col>, <col>)", "the columns it covers"),
+    ],
+    hint: "CREATE INDEX ON events USING bloom (country, plan, status);",
+    starterTemplate: "CREATE INDEX ON events USING bloom (${1:___});",
+    solutionSql: "CREATE INDEX ON events USING bloom (country, plan, status);",
+    checkSql:
+      "SELECT count(*) > 0 AS ok FROM pg_indexes WHERE tablename = 'events' AND indexdef ILIKE '%using bloom %';",
   },
 
   // ---------------------------------------------------------------- Extensions

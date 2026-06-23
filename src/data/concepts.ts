@@ -24,6 +24,10 @@ export const CONCEPTS: Record<string, ConceptMeta> = {
   CTE: { color: "#34d399", tagline: "Name a result with WITH, then use it." },
   CASE: { color: "#fb923c", tagline: "If/then logic inside a query." },
 
+  // Indexes
+  Index: { color: "#60a5fa", tagline: "Jump straight to rows instead of scanning all." },
+  bloom: { color: "#f87171", tagline: "One compact index for many-column equality filters." },
+
   // Postgres extensions (real, running in PGlite)
   pgvector: { color: "#38bdf8", tagline: "Similarity search over vector embeddings." },
   pg_trgm: { color: "#fbbf24", tagline: "Fuzzy text matching with trigrams." },
