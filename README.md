@@ -12,11 +12,13 @@ change the data.
 
 ## Features
 
-- **Two tracks, one app** — a **SQL / Postgres** track and a **MongoDB** track
-  (find, projection, query operators, sort/limit, aggregation pipeline),
-  switchable in the sidebar, sharing one progress bar and certificate. Mongo
-  runs on [mingo](https://github.com/kofrasa/mingo) (pure-JS MQL — an emulator,
-  not a real `mongod`).
+- **Two tracks, one app** — a **SQL / Postgres** track and an **11-lesson
+  MongoDB** track (find, operators, projection, sort/limit, aggregation,
+  `$match`+`$group`, `$lookup` joins, and writes — `insertOne` / `updateOne` /
+  `deleteOne`), each with its own Playground, switchable in the sidebar and
+  sharing one progress bar + certificate. Mongo runs on
+  [mingo](https://github.com/kofrasa/mingo) (pure-JS MQL — an emulator, not a
+  real `mongod`).
 - **32 SQL lessons** in 8 sections — from `SELECT *` through joins,
   subqueries, CTEs and `CASE`, **JSON/JSONB** (`->`, `->>`, `@>`, array
   expansion, `jsonb_set`), **indexes** (B-tree + bloom, on a 5,000-row table so

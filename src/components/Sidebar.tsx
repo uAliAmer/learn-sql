@@ -117,31 +117,27 @@ export function Sidebar({
 
       <div className="playground-nav">
         <div className="nav-label">More</div>
-        {track === "sql" && (
-          <>
-            <button
-              className={`lesson-link${view === "playground" ? " is-active" : ""}`}
-              onClick={onOpenPlayground}
-            >
-              <span className="tick">▶</span>
-              <span className="lesson-link__title">Playground</span>
-            </button>
-            {view === "playground" && (
-              <div className="db-picker">
-                {DATABASES.map((d) => (
-                  <label key={d.id} className="db-option">
-                    <input
-                      type="radio"
-                      name="pg-db"
-                      checked={playgroundDbId === d.id}
-                      onChange={() => onSelectPlaygroundDb(d.id)}
-                    />
-                    {d.name}
-                  </label>
-                ))}
-              </div>
-            )}
-          </>
+        <button
+          className={`lesson-link${view === "playground" ? " is-active" : ""}`}
+          onClick={onOpenPlayground}
+        >
+          <span className="tick">▶</span>
+          <span className="lesson-link__title">Playground</span>
+        </button>
+        {track === "sql" && view === "playground" && (
+          <div className="db-picker">
+            {DATABASES.map((d) => (
+              <label key={d.id} className="db-option">
+                <input
+                  type="radio"
+                  name="pg-db"
+                  checked={playgroundDbId === d.id}
+                  onChange={() => onSelectPlaygroundDb(d.id)}
+                />
+                {d.name}
+              </label>
+            ))}
+          </div>
         )}
 
         <button

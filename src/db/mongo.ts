@@ -1,4 +1,4 @@
-import { find, aggregate } from "mingo";
+import { find, Aggregator, Query, updateOne as mingoUpdateOne } from "mingo";
 import { getMongoDataset } from "../data/mongoData";
 import { rowKey, type QueryResult } from "./pglite";
 
@@ -16,20 +16,39 @@ export function loadMongo(datasetId: string): void {
   collections = clone(getMongoDataset(datasetId).collections);
 }
 
-/** A minimal `db.collection` surface: find() and aggregate(). */
+/** A `db.collection` surface: find / aggregate / insertOne / updateOne / deleteOne. */
 class Collection {
-  constructor(private docs: Doc[]) {}
+  constructor(
+    private docs: Doc[],
+    private all: Record<string, Doc[]>,
+  ) {}
   find(criteria: Doc = {}, projection?: Doc) {
     return find(this.docs, criteria, projection);
   }
   aggregate(pipeline: Record<string, unknown>[]) {
-    return aggregate(this.docs, pipeline);
+    // collectionResolver lets $lookup reach the other collections.
+    return new Aggregator(pipeline, {
+      collectionResolver: (name: string) => this.all[name] ?? [],
+    }).run(this.docs);
+  }
+  insertOne(doc: Doc) {
+    this.docs.push(clone(doc));
+    return { acknowledged: true, insertedId: doc._id ?? null };
+  }
+  updateOne(filter: Doc, update: Doc) {
+    return mingoUpdateOne(this.docs, filter, update);
+  }
+  deleteOne(filter: Doc) {
+    const q = new Query(filter);
+    const i = this.docs.findIndex((d) => q.test(d));
+    if (i >= 0) this.docs.splice(i, 1);
+    return { acknowledged: true, deletedCount: i >= 0 ? 1 : 0 };
   }
 }
 
 function makeDb(cols: Record<string, Doc[]>): Record<string, Collection> {
   const db: Record<string, Collection> = {};
-  for (const [name, docs] of Object.entries(cols)) db[name] = new Collection(docs);
+  for (const [name, docs] of Object.entries(cols)) db[name] = new Collection(docs, cols);
   return db;
 }
 
@@ -55,7 +74,7 @@ function toQueryResult(rows: Doc[], statement: string): QueryResult {
   return { columns: [...cols], rows, statement };
 }
 
-/** Run a query against the live working collections. */
+/** Run a query against the live working collections (writes mutate them). */
 export function runMongo(code: string): QueryResult[] {
   return [toQueryResult(evalQuery(code, makeDb(collections)), code)];
 }
@@ -77,7 +96,7 @@ export function checkMongo(opts: {
   }
 }
 
-/** Run on a throwaway clone so write-style queries can't disturb the live data. */
+/** Run on a throwaway clone; for write lessons, read back with `checkCode`. */
 function runOnClone(code: string, checkCode?: string): QueryResult {
   const db = makeDb(clone(collections));
   if (checkCode) {

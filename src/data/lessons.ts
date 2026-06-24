@@ -55,7 +55,8 @@ const JSON_S = "JSON";
 const WRITES = "Changing data";
 const INDEXES = "Indexes";
 const EXT = "Extensions";
-const MONGO = "MongoDB";
+const MONGO = "MongoDB basics";
+const MONGO2 = "MongoDB: pipelines & writes";
 
 export const LESSONS: Lesson[] = [
   // ----------------------------------------------------------------- Basics
@@ -849,6 +850,99 @@ export const LESSONS: Lesson[] = [
     hint: 'db.orders.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }])',
     starterTemplate: 'db.orders.aggregate([{ $group: { _id: "$status", count: ${1:___} } }])',
     solutionSql: 'db.orders.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }])',
+  },
+  {
+    id: "m-match-group",
+    track: "mongo",
+    title: "Match then group",
+    section: MONGO2,
+    concept: "MongoDB",
+    databaseId: "store",
+    keyIdea: "Stage them: `$match` filters first, then `$group` aggregates what's left.",
+    task: "Total `total` per user, counting only **shipped** orders. Output `_id` (user) and `total`.",
+    syntax: [
+      kw("db.orders.aggregate(["),
+      slot("{ $match: ... }", "filter stage"),
+      kw(","),
+      slot("{ $group: ... }", "aggregate stage"),
+      kw("])"),
+    ],
+    hint: 'db.orders.aggregate([{ $match: { status: "shipped" } }, { $group: { _id: "$user", total: { $sum: "$total" } } }])',
+    starterTemplate:
+      'db.orders.aggregate([{ $match: ${1:___} }, { $group: { _id: "$user", total: { $sum: "$total" } } }])',
+    solutionSql:
+      'db.orders.aggregate([{ $match: { status: "shipped" } }, { $group: { _id: "$user", total: { $sum: "$total" } } }])',
+  },
+  {
+    id: "m-lookup",
+    track: "mongo",
+    title: "Join with $lookup",
+    section: MONGO2,
+    concept: "MongoDB",
+    databaseId: "store",
+    keyIdea: "`$lookup` is Mongo's join — it pulls matching docs from another collection into an array field.",
+    task: "For each order, attach the matching user document(s): `$lookup` from `users`, matching the order's `user` to the user's `name`, as `u`.",
+    syntax: [
+      kw("db.orders.aggregate([{ $lookup:"),
+      slot("{ from, localField, foreignField, as }"),
+      kw("}])"),
+    ],
+    hint: 'db.orders.aggregate([{ $lookup: { from: "users", localField: "user", foreignField: "name", as: "u" } }])',
+    starterTemplate: "db.orders.aggregate([{ $lookup: ${1:___} }])",
+    solutionSql:
+      'db.orders.aggregate([{ $lookup: { from: "users", localField: "user", foreignField: "name", as: "u" } }])',
+  },
+  {
+    id: "m-insert",
+    track: "mongo",
+    title: "Insert a document",
+    section: MONGO2,
+    concept: "MongoDB",
+    databaseId: "store",
+    keyIdea: "`insertOne(doc)` adds a document to a collection.",
+    task: "Add a product to `products`: name **Webcam**, category **Electronics**, price **54**, stock **30**.",
+    syntax: [kw("db.products.insertOne("), slot("{ ...fields }"), kw(")")],
+    hint: 'db.products.insertOne({ name: "Webcam", category: "Electronics", price: 54, stock: 30 })',
+    starterTemplate: "db.products.insertOne(${1:___})",
+    solutionSql:
+      'db.products.insertOne({ name: "Webcam", category: "Electronics", price: 54, stock: 30 })',
+    checkSql: 'db.products.find({ name: "Webcam" }, { _id: 0 })',
+  },
+  {
+    id: "m-update",
+    track: "mongo",
+    title: "Update a document",
+    section: MONGO2,
+    concept: "MongoDB",
+    databaseId: "store",
+    keyIdea: "`updateOne(filter, { $set: {...} })` changes the first matching document.",
+    task: "Upgrade user **Liam** to the `pro` plan, using `updateOne` and `$set`.",
+    syntax: [
+      kw("db.users.updateOne("),
+      slot("{ filter }"),
+      kw(","),
+      slot("{ $set: {...} }"),
+      kw(")"),
+    ],
+    hint: 'db.users.updateOne({ name: "Liam" }, { $set: { plan: "pro" } })',
+    starterTemplate: "db.users.updateOne(${1:___}, { $set: ${2:___} })",
+    solutionSql: 'db.users.updateOne({ name: "Liam" }, { $set: { plan: "pro" } })',
+    checkSql: "db.users.find({}, { name: 1, plan: 1, _id: 0 })",
+  },
+  {
+    id: "m-delete",
+    track: "mongo",
+    title: "Delete a document",
+    section: MONGO2,
+    concept: "MongoDB",
+    databaseId: "store",
+    keyIdea: "`deleteOne(filter)` removes the first document that matches.",
+    task: "Delete the user named **Noor** with `deleteOne`.",
+    syntax: [kw("db.users.deleteOne("), slot("{ filter }"), kw(")")],
+    hint: 'db.users.deleteOne({ name: "Noor" })',
+    starterTemplate: "db.users.deleteOne(${1:___})",
+    solutionSql: 'db.users.deleteOne({ name: "Noor" })',
+    checkSql: "db.users.find({}, { name: 1, _id: 0 })",
   },
 ];
 

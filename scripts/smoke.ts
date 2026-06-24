@@ -8,7 +8,7 @@ import { fuzzystrmatch } from "@electric-sql/pglite/contrib/fuzzystrmatch";
 import { hstore } from "@electric-sql/pglite/contrib/hstore";
 import { ltree } from "@electric-sql/pglite/contrib/ltree";
 import { bloom } from "@electric-sql/pglite/contrib/bloom";
-import { find, aggregate } from "mingo";
+import { find, Aggregator, Query, updateOne as mingoUpdateOne } from "mingo";
 import { DATABASES, getDatabase } from "../src/data/databases.ts";
 import { getMongoDataset } from "../src/data/mongoData.ts";
 import { LESSONS, lessonTrack } from "../src/data/lessons.ts";
@@ -58,24 +58,38 @@ for (const lesson of LESSONS.filter((l) => lessonTrack(l) === "sql")) {
   }
 }
 
-// 2b. Every Mongo lesson's solution must run via mingo and return docs.
+// 2b. Every Mongo lesson must run via mingo (mirrors db/mongo.ts) and return docs.
 {
   const ds = getMongoDataset("store");
   const cloneC = (x) => JSON.parse(JSON.stringify(x));
   const makeDb = (cols) => {
     const dbm = {};
     for (const [n, d] of Object.entries(cols)) {
-      dbm[n] = { find: (q = {}, p) => find(d, q, p), aggregate: (p) => aggregate(d, p) };
+      dbm[n] = {
+        find: (q = {}, p) => find(d, q, p),
+        aggregate: (pipeline) =>
+          new Aggregator(pipeline, { collectionResolver: (name) => cols[name] ?? [] }).run(d),
+        insertOne: (doc) => (d.push(cloneC(doc)), { acknowledged: true }),
+        updateOne: (filter, upd) => mingoUpdateOne(d, filter, upd),
+        deleteOne: (filter) => {
+          const qq = new Query(filter);
+          const i = d.findIndex((x) => qq.test(x));
+          if (i >= 0) d.splice(i, 1);
+          return { deletedCount: i >= 0 ? 1 : 0 };
+        },
+      };
     }
     return dbm;
   };
   const normalize = (r) =>
     Array.isArray(r) ? r : r && typeof r.all === "function" ? r.all() : r && typeof r === "object" ? [r] : [];
+  const evalQ = (code, dbm) =>
+    normalize(new Function("db", `"use strict"; return ( ${code} );`)(dbm));
   for (const lesson of LESSONS.filter((l) => lessonTrack(l) === "mongo")) {
     try {
-      const rows = normalize(
-        new Function("db", `"use strict"; return ( ${lesson.solutionSql} );`)(makeDb(cloneC(ds.collections))),
-      );
+      const dbm = makeDb(cloneC(ds.collections));
+      const out = evalQ(lesson.solutionSql, dbm);
+      const rows = lesson.checkSql ? evalQ(lesson.checkSql, dbm) : out;
       if (rows.length === 0) fail(`${lesson.id}: returned 0 docs`);
       else console.log(`✓ lesson runs: ${lesson.id}`);
     } catch (e) {

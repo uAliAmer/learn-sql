@@ -30,8 +30,9 @@ const PLAYGROUND_STARTER: Record<string, string> = {
   library: "-- Free play. Write any SQL and press Run (Ctrl/Cmd + Enter).\nSELECT * FROM books;",
 };
 
-function templateFor(view: View, lessonId: string, playgroundDbId: string): string {
+function templateFor(view: View, lessonId: string, playgroundDbId: string, track: Track): string {
   if (view === "lesson") return getLesson(lessonId)!.starterTemplate;
+  if (track === "mongo") return "// Free play. Run any Mongo query (Ctrl/Cmd + Enter).\ndb.users.find({})";
   return PLAYGROUND_STARTER[playgroundDbId] ?? "SELECT * FROM information_schema.tables;";
 }
 
@@ -59,8 +60,9 @@ export default function App() {
   const editorRef = useRef<SqlEditorHandle>(null);
 
   const lesson = view === "lesson" ? getLesson(activeLessonId) : undefined;
-  const activeTrack: Track = lesson ? lessonTrack(lesson) : "sql"; // playground is SQL
-  const seedId = view === "lesson" ? lesson!.databaseId : playgroundDbId;
+  const activeTrack: Track = lesson ? lessonTrack(lesson) : track; // playground follows the sidebar track
+  const seedId =
+    view === "lesson" ? lesson!.databaseId : activeTrack === "mongo" ? "store" : playgroundDbId;
   const contextKey =
     view === "certificate"
       ? "certificate"
@@ -122,7 +124,7 @@ export default function App() {
         if (cancelled) return;
         applySchema(tables);
       }
-      editorRef.current?.load(templateFor(view, activeLessonId, playgroundDbId));
+      editorRef.current?.load(templateFor(view, activeLessonId, playgroundDbId, activeTrack));
       setReady(true);
     })();
     return () => {
@@ -155,6 +157,8 @@ export default function App() {
     const userQuery = editorRef.current?.getValue() ?? "";
     let r: { pass: boolean; actual: QueryResult | null; expected: QueryResult | null; error?: string };
     if (activeTrack === "mongo") {
+      // Reseed before grading writes so a prior manual Run can't taint it.
+      if (lesson.checkSql) loadMongo(lesson.databaseId);
       r = checkMongo({
         userCode: userQuery,
         solutionCode: lesson.solutionSql,
@@ -223,7 +227,7 @@ export default function App() {
       await loadDatabase(db.id, db.seedSql);
       await refreshSchema();
     }
-    editorRef.current?.load(templateFor(view, activeLessonId, playgroundDbId));
+    editorRef.current?.load(templateFor(view, activeLessonId, playgroundDbId, activeTrack));
     setResults([]);
     setComparison(null);
     setError(null);
@@ -276,10 +280,7 @@ export default function App() {
           setView("lesson");
           setActiveLessonId(id);
         }}
-        onOpenPlayground={() => {
-          setTrack("sql");
-          setView("playground");
-        }}
+        onOpenPlayground={() => setView("playground")}
         onOpenCertificate={() => setView("certificate")}
         onSelectPlaygroundDb={setPlaygroundDbId}
         onResetProgress={() => setShowResetConfirm(true)}
